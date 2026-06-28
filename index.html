@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ZK Engine</title>
+<style>
+:root{
+  --bg:#15171c; --surface:#1c1f26; --surface2:#232730; --line:#2e333e;
+  --text:#e7e9ed; --muted:#878d9a; --faint:#5a606c;
+  --accent:#ff5a2c; --accent2:#ff8a5c; --accentdim:#7a2e18;
+  --green:#52b07a; --amber:#dba23f; --red:#e0563e;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.45;
+  font-size:15px;padding:max(env(safe-area-inset-top),0px) 0 64px;
+  background-image:radial-gradient(1200px 400px at 80% -10%,rgba(255,90,44,.06),transparent)}
+.wrap{max-width:760px;margin:0 auto;padding:0 18px}
+header{padding:26px 0 18px;border-bottom:1px solid var(--line);margin-bottom:22px}
+.brand{display:flex;align-items:baseline;gap:12px}
+.brand h1{font-size:20px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.brand h1 b{color:var(--accent)}
+.brand .v{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.05em}
+.tag{color:var(--muted);font-size:13px;margin-top:6px;max-width:52ch}
+.tag b{color:var(--text);font-weight:600}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;margin-bottom:18px;overflow:hidden}
+.panel>h2{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);
+  padding:13px 16px;border-bottom:1px solid var(--line);background:var(--surface2);font-weight:700;
+  display:flex;justify-content:space-between;align-items:center}
+.panel .body{padding:16px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+.field label{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.field input,.field select{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);
+  border-radius:7px;padding:9px 10px;font-family:var(--mono);font-size:15px;outline:none}
+.field input:focus,.field select:focus{border-color:var(--accent)}
+.maxes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+.maxes .field input{font-size:20px;font-weight:700;text-align:center}
+
+.btn{appearance:none;border:none;cursor:pointer;font-family:var(--sans);font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;font-size:12px;padding:12px 18px;border-radius:7px;
+  background:var(--accent);color:#1a0e08;margin-top:16px;width:100%;transition:filter .15s}
+.btn:hover{filter:brightness(1.08)}.btn:active{filter:brightness(.94)}
+
+.tabs{display:flex;gap:2px;background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:3px;margin-bottom:18px}
+.tabs button{flex:1;background:none;border:none;color:var(--muted);font-family:var(--sans);font-weight:700;
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:10px;border-radius:6px;cursor:pointer}
+.tabs button.on{background:var(--bg);color:var(--text);box-shadow:0 1px 0 rgba(0,0,0,.3)}
+.hidden{display:none}
+
+.cyc{font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:14px;display:flex;gap:16px;flex-wrap:wrap}
+.cyc b{color:var(--accent2)}
+
+.block{border:1px solid var(--line);border-radius:9px;margin-bottom:14px;overflow:hidden}
+.block .bhead{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--surface2);border-bottom:1px solid var(--line)}
+.block .idx{font-family:var(--mono);font-size:11px;color:var(--faint);border:1px solid var(--line);border-radius:4px;padding:2px 6px}
+.block .phase{font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:capitalize}
+.block .wks{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto}
+.block.taper .phase{color:var(--accent)}
+.block .ratio{font-family:var(--mono);font-size:10px;color:var(--faint);padding:0 14px;margin:9px 0 3px;letter-spacing:.04em}
+.lift{padding:9px 14px;border-top:1px solid var(--line)}
+.lift:first-of-type{border-top:none}
+.lift .lname{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:flex;justify-content:space-between}
+.lift .lname .zones{font-family:var(--mono);color:var(--faint);letter-spacing:0}
+.work{display:flex;align-items:center;gap:14px}
+.work .big{font-family:var(--mono);font-weight:700;font-size:26px;min-width:96px}
+.work .big .u{font-size:12px;color:var(--muted);font-weight:400;margin-left:3px}
+.work .meta{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.work .meta .z{color:var(--accent2)}
+
+/* plate bar signature */
+.bar{display:flex;align-items:center;gap:1px;height:46px;margin-left:auto}
+.collar{width:8px;height:8px;background:var(--faint);border-radius:1px}
+.sleeve{width:14px;height:3px;background:var(--faint)}
+.plate{width:8px;border-radius:1px;display:flex;align-items:center;justify-content:center}
+.plate span{font-family:var(--mono);font-size:7px;color:rgba(255,255,255,.85);transform:rotate(-90deg);white-space:nowrap}
+.perside{font-family:var(--mono);font-size:10px;color:var(--faint);margin-left:8px;align-self:center}
+
+.dsel{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.dayhdr{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:4px 0 12px}
+.ex{border:1px solid var(--line);border-radius:9px;margin-bottom:12px;overflow:hidden}
+.ex.downreg{border-color:var(--amber)}
+.exhead{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--line)}
+.exname{font-weight:700;font-size:14px}
+.exbadge{margin-left:auto;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;padding:2px 7px;border-radius:4px;border:1px solid var(--line);color:var(--muted)}
+.exbadge.ME{color:var(--accent);border-color:var(--accentdim)}
+.exbadge.DE{color:#6aa9e0;border-color:#2f5fae}
+.exbadge.RE{color:var(--green);border-color:#2e6b48}
+.exmain{display:flex;align-items:center;gap:14px;padding:12px 14px}
+.exbig{font-family:var(--mono);font-weight:700;font-size:24px}
+.exbig .x{color:var(--faint);margin:0 2px;font-weight:400}
+.exbig .exat{font-size:15px;color:var(--muted);font-weight:400;margin-left:10px}
+.exbig .exat .u{font-size:11px}
+.exmeta{font-family:var(--mono);font-size:11px;color:var(--muted);padding:0 14px 12px}
+.exmeta .dr{color:var(--amber)}
+.exslot{font-family:var(--mono);font-size:11px;color:var(--faint);font-weight:700;margin-right:9px}
+.ex.acc .exhead{background:var(--surface)}
+.exbadge.acc{color:var(--muted)}
+.excue{font-size:12px;color:var(--muted);line-height:1.55;padding:10px 14px 12px;border-top:1px dashed var(--line)}
+.tierlab{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:16px 0 8px}
+.today-ctl{margin-bottom:16px}
+.slider{margin-bottom:14px}
+.slider .srow{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.slider .srow b{font-family:var(--mono);color:var(--text);font-size:13px}
+input[type=range]{width:100%;-webkit-appearance:none;height:5px;border-radius:3px;background:var(--surface2);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-radius:50%;background:var(--accent);cursor:pointer}
+
+.score{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:9px;margin-bottom:16px;border:1px solid var(--line)}
+.score .num{font-family:var(--mono);font-size:34px;font-weight:700}
+.score .band{font-weight:800;letter-spacing:.14em;text-transform:uppercase;font-size:13px}
+.score .desc{font-size:12px;color:var(--muted);margin-left:auto;text-align:right;max-width:24ch}
+.score.green{border-color:var(--green)} .score.green .num,.score.green .band{color:var(--green)}
+.score.amber{border-color:var(--amber)} .score.amber .num,.score.amber .band{color:var(--amber)}
+.score.red{border-color:var(--red)} .score.red .num,.score.red .band{color:var(--red)}
+
+.modrow{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+.modrow .ml{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);min-width:74px}
+.modrow .from{font-family:var(--mono);color:var(--faint);font-size:13px;text-decoration:line-through}
+.modrow .arrow{color:var(--faint)}
+.modrow .to{font-family:var(--mono);font-weight:700;font-size:17px}
+.modrow .act{font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);border:1px solid var(--amber);border-radius:4px;padding:2px 5px;margin-left:auto;opacity:.85}
+.modrow.same .to{color:var(--green)} .modrow.same .from{display:none}
+.note{font-size:12px;color:var(--muted);background:var(--surface2);border:1px solid var(--line);border-left:2px solid var(--accent);
+  border-radius:7px;padding:11px 13px;margin-top:6px;line-height:1.5}
+.note b{color:var(--text)}
+.logpanel{background:var(--surface2);border:1px solid var(--line);border-radius:9px;padding:13px;margin-top:14px}
+.logh{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:9px}
+.logrow{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:11px;color:var(--muted)}
+.logrow .logn{width:46px;color:var(--faint);font-family:var(--mono);font-size:10px}
+.logrow input{width:60px;background:var(--surface);border:1px solid var(--line);border-radius:5px;color:var(--text);padding:5px 6px;font-family:var(--mono);font-size:12px;text-align:right}
+.logrow .lu,.logrow span{font-size:10px;color:var(--faint)}
+.logbtn{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;background:var(--accent);color:#15171c;border:none;border-radius:6px;padding:8px 14px;margin-top:9px;cursor:pointer;font-weight:600}
+.logbtn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent);margin-left:0}
+.startbtn{display:block;width:100%;font-family:var(--mono);font-size:14px;letter-spacing:.06em;text-transform:uppercase;background:var(--accent);color:#15171c;border:none;border-radius:10px;padding:16px;margin-top:20px;cursor:pointer;font-weight:700}
+.startbtn:hover{filter:brightness(1.06)}
+.backbtn{font-family:var(--mono);font-size:12px;color:var(--accent);background:transparent;border:none;cursor:pointer;padding:4px 0;margin-bottom:8px}
+.loghdr{font-size:16px;color:var(--text);font-weight:600;margin-bottom:14px}
+.logtgt{font-family:var(--mono);font-size:11px;color:var(--faint);font-weight:400;margin-left:6px}
+.logbtnrow{display:flex;gap:10px;align-items:center;margin-top:6px}
+.est{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:12px;padding:11px 13px;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.est .e{font-size:12px;color:var(--muted)} .est .e b{color:var(--text);font-family:var(--mono)}
+.est .ehd{width:100%;font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin-bottom:2px}
+.storebar{font-size:11px;color:var(--amber);background:rgba(255,160,60,.08);border:1px solid var(--amber);border-radius:7px;padding:8px 11px;margin-bottom:10px;line-height:1.5}
+.logex{margin-bottom:4px}
+.logexn{font-size:11px;color:var(--text);font-family:var(--mono);margin:9px 0 5px;padding-top:7px;border-top:1px solid var(--line)}
+.savedtag{font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:.05em;margin-right:6px}
+.donebadge{font-family:var(--mono);font-size:9px;letter-spacing:.05em;color:var(--green);border:1px solid var(--green);border-radius:4px;padding:1px 6px;margin-left:8px;vertical-align:middle}
+.swaprow{margin-top:8px}
+.swapchip{font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer;font-family:inherit}
+.swapchip:hover{border-color:var(--accent);color:var(--text)}
+.swapchip.cur{border-color:var(--accent);color:var(--accent);font-weight:600}
+.swapchip.def{color:var(--faint)}
+.swapopt b{color:var(--text);font-weight:600}
+.swapopt span{font-family:var(--mono);font-size:10px;color:var(--faint)}
+.pintag{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent);border:1px solid var(--accent);border-radius:20px;padding:2px 7px;margin-left:4px}
+.pinadvice{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:5px}
+.pinadvice.warn{color:var(--accent)}
+.pinpanel{margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pinlab{font-size:11px;color:var(--muted)}
+.pininput{width:92px;background:var(--surface2);border:1px solid var(--line);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:13px;padding:6px 8px}
+.pinset{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--bg);background:var(--accent);border:none;border-radius:6px;padding:7px 14px;cursor:pointer}
+.pinset:hover{opacity:.9}
+.chart{width:100%;height:auto;background:var(--surface2);border:1px solid var(--line);border-radius:9px}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .yl{fill:var(--faint);font-family:var(--mono);font-size:9px;text-anchor:end}
+.chart .xl{fill:var(--faint);font-family:var(--mono);font-size:9px}
+.histrow{border-bottom:1px solid var(--line);padding:9px 0}
+.testbadge{font-family:var(--mono);font-size:9px;letter-spacing:.06em;color:var(--accent);border:1px solid var(--accent);border-radius:20px;padding:3px 9px;margin-left:auto}
+.ramp{margin:9px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.ramprow{display:flex;justify-content:space-between;align-items:center;padding:7px 12px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:13px;color:var(--text)}
+.ramprow:last-child{border-bottom:none}
+.ramprow.top{background:var(--surface2);color:var(--accent);font-weight:600}
+.ramprow .rp{font-size:10px;color:var(--faint)}
+.ramprow .u{font-size:10px;color:var(--muted);margin-left:2px}
+.score.comp{border-color:#3ddc8c}
+.score.comp .num,.score.comp .band{color:#3ddc8c}
+.compnote{border-left:3px solid var(--accent);padding-left:11px}
+.wdrow{margin-top:16px}
+.wdlbl{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
+.wdpick{display:flex;gap:6px;flex-wrap:wrap}
+.wdpick button{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--surface2);border:1px solid var(--line);border-radius:6px;padding:8px 13px;cursor:pointer;min-width:48px}
+.wdpick button.on{color:#15171c;background:var(--accent);border-color:var(--accent);font-weight:600}
+.schhd{font-size:13px;color:var(--text);margin-bottom:6px}
+.wsec{margin:11px 0;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.whd{background:var(--surface2);padding:8px 12px;font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.schrow{display:flex;gap:14px;padding:8px 12px;border-top:1px solid var(--line);font-size:13px;align-items:baseline}
+.schrow .sdate{font-family:var(--mono);font-size:12px;color:var(--accent);width:128px;flex-shrink:0}
+.schrow .sday{color:var(--text);text-transform:capitalize}
+.schcomp{margin-top:13px;padding:12px 14px;border:1px solid var(--accent);border-radius:9px;color:var(--accent);font-size:14px}
+.schstart{font-family:var(--mono);font-size:11px;color:var(--muted);margin:4px 0 11px;display:flex;align-items:center;gap:10px}
+.schrow.today{background:var(--surface2)}
+.schrow.done .sday{color:var(--muted)}
+.schk{margin-left:auto;color:#3ddc8c;font-weight:700;font-size:15px}
+.schtoday{margin-left:auto;font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);border:1px solid var(--accent);border-radius:20px;padding:2px 9px}
+.taperline{margin:9px 0;border:1px solid var(--line);border-radius:8px;padding:11px 13px}
+.taperrow{display:flex;gap:13px;padding:7px 0;border-bottom:1px solid var(--line);font-size:12px}
+.taperrow:last-child{border-bottom:none}
+.taperrow .tdate{font-family:var(--mono);font-size:11px;color:var(--accent);width:104px;flex-shrink:0}
+.taperrow .tdo{color:var(--muted);line-height:1.45}
+.score.test{border-color:var(--accent)}
+.score.test .num,.score.test .band{color:var(--accent)}
+.histhead{display:flex;align-items:center;gap:12px}
+.histhead .sd{font-family:var(--mono);font-size:11px;color:var(--faint);width:50px;flex-shrink:0}
+.histhead .sl{color:var(--muted);font-size:12px;flex:1}
+.histacts{display:flex;gap:6px}
+.minibtn{font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:5px;padding:5px 9px;cursor:pointer}
+.minibtn:hover{color:var(--text);border-color:var(--muted)}
+.minibtn.danger:hover{color:var(--accent);border-color:var(--accent)}
+.histpanel{margin-top:9px;padding-left:10px;border-left:2px solid var(--line)}
+.histpanel.hidden{display:none}
+.editrow{display:flex;align-items:flex-end;gap:8px;padding:6px 0;flex-wrap:wrap}
+.editrow .ename{font-family:var(--mono);font-size:11px;color:var(--text);min-width:110px;flex:1}
+.efield{display:flex;flex-direction:column;gap:3px}
+.efield label{font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint)}
+.einp{width:60px;background:var(--surface2);border:1px solid var(--line);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:13px;padding:5px 7px}
+.rtrow{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--line)}
+.rtrow:last-child{border-bottom:none}
+.rtl{font-family:var(--mono);font-size:11px;text-transform:capitalize;color:var(--text);min-width:60px}
+.rtnum{font-family:var(--mono);font-size:13px;color:var(--text)}
+.rtnum .rtarrow{color:var(--faint);margin:0 5px}
+.rtnum .pu{font-size:10px;color:var(--muted);margin-left:3px}
+.rtd{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto}
+.rtpill{font-family:var(--mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:3px 9px;border-radius:20px;border:1px solid var(--line);color:var(--muted)}
+.rtpill.ahead{color:var(--accent);border-color:var(--accent)}
+.rtpill.on{color:#3ddc8c;border-color:#2a7a52}
+.rtrow.ahead .rtd{color:var(--accent)}
+.tbar .tfill.DE{background:#4aa8ff}.tbar .tfill.RE{background:#3ddc8c}
+.swapbar{margin-top:9px;display:flex;gap:6px}
+.swapbtn{font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:4px 9px;cursor:pointer;background:transparent}
+.swapbtn:hover{color:var(--accent);border-color:var(--accent)}
+.swapbtn.ghost{color:var(--faint)}
+.swappanel{margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;flex-direction:column}
+.swappanel.hidden{display:none}
+.swapopt{display:flex;flex-direction:column;align-items:center;gap:1px;font-size:12px;color:var(--text);background:var(--surface2);border:1px solid var(--line);border-radius:6px;padding:8px 11px;cursor:pointer;font-family:inherit;text-align:left;justify-content:space-between}
+.swapopt:hover{border-color:var(--accent);color:var(--text)}
+.swaptag{font-family:var(--mono);font-size:9px;letter-spacing:.05em;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:1px 5px;margin-left:6px}
+.swapnone{font-size:11px;color:var(--faint);padding:4px}
+.resetrow{display:flex;gap:8px;margin-top:14px;padding-top:13px;border-top:1px solid var(--line)}
+.resetbtn{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:6px;padding:8px 13px;cursor:pointer}
+.resetbtn:hover{color:var(--text);border-color:var(--muted)}
+.resetbtn.danger:hover{color:var(--accent);border-color:var(--accent)}
+.empty{color:var(--muted);font-size:13px;line-height:1.6;text-align:center;padding:40px 20px;background:var(--surface2);border:1px solid var(--line);border-radius:10px}
+.empty b{color:var(--text)}
+.pstats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.pstat{flex:1;min-width:78px;background:var(--surface2);border:1px solid var(--line);border-radius:9px;padding:12px 10px;text-align:center}
+.pstat .pv{font-family:var(--mono);font-size:21px;color:var(--text);font-weight:600}
+.pstat .pv .pu{font-size:11px;color:var(--faint);margin-left:2px}
+.pstat .pk{font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
+.psec{margin-bottom:20px}
+.psec .ph{font-family:var(--mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+.legend{display:flex;gap:14px;margin-top:8px;justify-content:center}
+.legend .lg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.legend .lg i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.tbar{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.tbar .tm{font-family:var(--mono);font-size:10px;color:var(--muted);width:24px}
+.tbar .ttrack{flex:1;height:14px;background:var(--surface);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.tbar .tfill{height:100%;background:var(--accent)}
+.tbar .tv{font-family:var(--mono);font-size:10px;color:var(--faint);width:60px;text-align:right}
+.pnote{font-size:11px;color:var(--faint);margin-top:8px;line-height:1.5}
+.srow{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px}
+.srow .sd{font-family:var(--mono);font-size:11px;color:var(--faint);width:52px;flex-shrink:0}
+.srow .sl{color:var(--muted)}
+footer{color:var(--faint);font-family:var(--mono);font-size:10px;text-align:center;margin-top:28px;letter-spacing:.04em;line-height:1.7}
+</style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#15171c">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ZK Engine">
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="brand"><h1>ZK<b>·</b>Engine</h1><span class="v">spine v0.1 · 30 properties green</span></div>
+  <p class="tag">Principles-based strength programming after <b>Zatsiorsky &amp; Kraemer</b>. Your maxes in, a real plan out — in plates you can load.</p>
+</header>
+
+<div class="panel" id="setup">
+  <h2>Setup</h2>
+  <div class="body">
+    <div class="grid">
+      <div class="field"><label>Level</label><select id="status"><option>beginner</option><option selected>intermediate</option><option>advanced</option></select></div>
+      <div class="field"><label>Days / week</label><input id="days" type="number" value="3" min="2" max="6"></div>
+      <div class="field"><label>Plan by</label><select id="planby"><option value="weeks" selected>cycle length</option><option value="comp">competition date</option></select></div>
+      <div class="field"><label>Cycle (weeks)</label><input id="weeks" type="number" value="16" min="4" max="20"></div>
+      <div class="field"><label>Test week</label><input id="test" type="number" value="16" min="0" max="20"></div>
+      <div class="field"><label>Competition date</label><input id="compdate" type="date"></div>
+      <div class="field"><label>Units</label><select id="unit"><option value="lb" selected>lb</option><option value="kg">kg</option></select></div>
+      <div class="field"><label>Speed work</label><select id="speed"><option value="off" selected>off</option><option value="before">on · before main</option><option value="after">on · after main</option></select></div>
+      <div class="field"><label>Extra days favor</label><select id="freq"><option value="bench" selected>bench</option><option value="squat">squat</option><option value="deadlift">deadlift</option></select></div>
+    </div>
+    <div class="wdrow"><label class="wdlbl">Training days — pick the weekdays you train</label><div class="wdpick" id="wdpick"><button data-d="0" class="on">Mon</button><button data-d="1">Tue</button><button data-d="2" class="on">Wed</button><button data-d="3">Thu</button><button data-d="4" class="on">Fri</button><button data-d="5">Sat</button><button data-d="6">Sun</button></div></div>
+    <div class="maxes">
+      <div class="field"><label>Squat 1RM</label><input id="squat" type="number" value="255"></div>
+      <div class="field"><label>Bench 1RM</label><input id="bench" type="number" value="195"></div>
+      <div class="field"><label>Deadlift 1RM</label><input id="deadlift" type="number" value="325"></div>
+    </div>
+    <button class="btn" id="gen">Build my plan</button>
+    <div class="resetrow"><button id="export-csv" class="resetbtn">Export CSV</button><button id="reset-logs" class="resetbtn">Reset logs</button><button id="reset-all" class="resetbtn danger">Full reset</button></div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button id="t-plan" class="on">Plan</button>
+  <button id="t-today">Today</button>
+  <button id="t-progress">Progress</button>
+  <button id="t-sched">Schedule</button>
+</div>
+
+<div id="plan"></div>
+<div id="today" class="hidden"></div>
+<div id="progress" class="hidden"></div>
+<div id="schedule" class="hidden"></div>
+
+<footer>deterministic engine · loads round to your plates · readiness only ever lightens the day<br>built to learn — not medical or coaching advice</footer>
+</div>
+
+<script>"use strict";
+var _ZK = (() => {
+  // src/config.ts
+  var BASELINE_RATIO = {
+    beginner: { ME: 0.1, DE: 0.15, RE: 0.75 },
+    intermediate: { ME: 0.25, DE: 0.25, RE: 0.5 },
+    advanced: { ME: 0.4, DE: 0.3, RE: 0.3 }
+  };
+  var BLOCK_SHIFT = {
+    accumulative: { ME: -0.05, DE: -0.05, RE: 0.1 },
+    transmutative: { ME: 0.1, DE: 0.05, RE: -0.15 },
+    realizational: { ME: 0.1, DE: 0.1, RE: -0.2 },
+    deload: { ME: -0.1, DE: -0.05, RE: 0.15 }
+  };
+  var GUARDRAILS = {
+    beginnerMeCap: 0.15,
+    // beginner ME ≤ 15%
+    reFloor: 0.15,
+    // retaining floor for RE (everyone) — §11/§12
+    meFloorAll: 0,
+    deFloorAll: 0
+  };
+  function recoveryCapME(daysPerWeek) {
+    return Math.max(0.3, Math.min(0.55, 0.25 + 0.05 * daysPerWeek));
+  }
+  function exposuresPerMicrocycle(daysPerWeek, phase) {
+    const base = daysPerWeek * 2;
+    return phase === "realizational" || phase === "deload" ? Math.max(2, base - 2) : base;
+  }
+  var ZONE_RM = {
+    VL: "20-22RM",
+    L: "12-15RM",
+    M: "8-10RM",
+    H: "4-6RM",
+    VH: "1-3RM",
+    P: "40-70% (2-3 reps)"
+  };
+  var BLOCK_LEN = { min: 3, pref: 4, max: 5 };
+  var BAR_KG = 20;
+  var ZONE_PCT = {
+    VL: 0.588,
+    L: 0.69,
+    M: 0.769,
+    H: 0.857,
+    VH: 0.9375,
+    P: 0.55
+  };
+  var READINESS = {
+    weights: { energy: 0.5, sleep: 0.3, soreness: 0.2 },
+    advancedSorenessScale: 0.5,
+    // DOMS less reliable in advanced (Ch.9)
+    bands: { greenMin: 70, redMax: 45 },
+    // score 0–100; between = amber
+    localSorenessVeto: 4,
+    // per-region soreness ≥ this → down-shift that lift only
+    escalationThreshold: { default: 3, realizational: 2 }
+    // red days in last 5 → escalate
+  };
+  var ZONE_SCHEME = {
+    VL: { sets: 3, reps: 20, restMin: 1, restMax: 1.5 },
+    L: { sets: 3, reps: 13, restMin: 1, restMax: 2 },
+    M: { sets: 3, reps: 8, restMin: 2, restMax: 3 },
+    H: { sets: 4, reps: 5, restMin: 3, restMax: 5 },
+    VH: { sets: 5, reps: 2, restMin: 5, restMax: 7 },
+    P: { sets: 5, reps: 3, restMin: 3, restMax: 5 }
+  };
+
+  // src/macrocycle.ts
+  function targetRatio(status, phase) {
+    const base = BASELINE_RATIO[status];
+    const d = BLOCK_SHIFT[phase];
+    const raw = {
+      ME: Math.max(0, base.ME + d.ME),
+      DE: Math.max(0, base.DE + d.DE),
+      RE: Math.max(0, base.RE + d.RE)
+    };
+    const s = raw.ME + raw.DE + raw.RE;
+    return { ME: raw.ME / s, DE: raw.DE / s, RE: raw.RE / s };
+  }
+  function partition(cycleLengthWeeks) {
+    const n = Math.max(1, Math.round(cycleLengthWeeks / BLOCK_LEN.pref));
+    const base = Math.floor(cycleLengthWeeks / n);
+    let rem = cycleLengthWeeks - base * n;
+    const blocks = [];
+    for (let i = 0; i < n; i++) blocks.push(base + (i < rem ? 1 : 0));
+    for (let i = blocks.length - 1; i >= 1; i--) {
+      if (blocks[i] < BLOCK_LEN.min) {
+        blocks[i - 1] += blocks[i];
+        blocks.splice(i, 1);
+      }
+    }
+    return blocks;
+  }
+  function sequence(blockCount, status, peaking) {
+    if (!peaking || status === "beginner") {
+      return Array.from(
+        { length: blockCount },
+        (_, i) => i % 2 === 0 ? "accumulative" : "transmutative"
+      );
+    }
+    const phases = [];
+    for (let i = 0; i < blockCount; i++) {
+      if (i === blockCount - 1) phases.push("realizational");
+      else if (i === 0) phases.push("accumulative");
+      else phases.push("transmutative");
+    }
+    return phases;
+  }
+
+  // src/budget.ts
+  var EPS = 1e-9;
+  function clamp(x, lo, hi) {
+    return Math.max(lo, Math.min(hi, x));
+  }
+  function resolveRatio(target, b) {
+    const { floors: L, caps: U } = b;
+    const sumL = L.ME + L.DE + L.RE;
+    const feasibleByClause = sumL <= 1 + EPS && U.ME + U.DE + U.RE >= 1 - EPS && L.ME <= U.ME + EPS && L.DE <= U.DE + EPS && L.RE <= U.RE + EPS;
+    if (!feasibleByClause) {
+      return { feasible: false, ratio: { ...target } };
+    }
+    let ME = clamp(target.ME, L.ME, U.ME);
+    let DE = clamp(target.DE, L.DE, U.DE);
+    let RE = 1 - ME - DE;
+    if (RE < L.RE - EPS) {
+      let deficit = L.RE - RE;
+      const deRoom = DE - L.DE;
+      const takeDE = Math.min(deficit, deRoom);
+      DE -= takeDE;
+      deficit -= takeDE;
+      const meRoom = ME - L.ME;
+      const takeME = Math.min(deficit, meRoom);
+      ME -= takeME;
+      deficit -= takeME;
+      RE = 1 - ME - DE;
+      if (deficit > EPS) return { feasible: false, ratio: { ME, DE, RE } };
+    }
+    if (RE > U.RE + EPS) {
+      let surplus = RE - U.RE;
+      RE = U.RE;
+      const deRoom = U.DE - DE;
+      const addDE = Math.min(surplus, deRoom);
+      DE += addDE;
+      surplus -= addDE;
+      const meRoom = U.ME - ME;
+      const addME = Math.min(surplus, meRoom);
+      ME += addME;
+      surplus -= addME;
+      if (surplus > EPS) return { feasible: false, ratio: { ME, DE, RE } };
+    }
+    return { feasible: true, ratio: { ME, DE, RE } };
+  }
+  function apportion(ratio, N) {
+    const raw = { ME: ratio.ME * N, DE: ratio.DE * N, RE: ratio.RE * N };
+    const floors = {
+      ME: Math.floor(raw.ME),
+      DE: Math.floor(raw.DE),
+      RE: Math.floor(raw.RE)
+    };
+    let used = floors.ME + floors.DE + floors.RE;
+    let remaining = N - used;
+    const fracs = [
+      ["ME", raw.ME - floors.ME],
+      ["DE", raw.DE - floors.DE],
+      ["RE", raw.RE - floors.RE]
+    ];
+    fracs.sort((a, c) => c[1] - a[1]);
+    const out = { ...floors };
+    for (let i = 0; i < remaining; i++) out[fracs[i % 3][0]]++;
+    return out;
+  }
+  function composeBudget(target, bounds, N) {
+    const { feasible, ratio } = resolveRatio(target, bounds);
+    const exposures = apportion(ratio, N);
+    return { feasible, ratio, exposures, N };
+  }
+
+  // src/engine.ts
+  function boundsFor(status, daysPerWeek) {
+    const capME = status === "beginner" ? Math.min(GUARDRAILS.beginnerMeCap, recoveryCapME(daysPerWeek)) : recoveryCapME(daysPerWeek);
+    return {
+      floors: { ME: GUARDRAILS.meFloorAll, DE: GUARDRAILS.deFloorAll, RE: GUARDRAILS.reFloor },
+      caps: { ME: capME, DE: 1, RE: 1 }
+    };
+  }
+  function zoneFor(method, phase, status, vhEligible) {
+    if (method === "DE") return "P";
+    if (method === "RE") return phase === "accumulative" ? "L" : "M";
+    if (status === "beginner" || !vhEligible) return "H";
+    return phase === "transmutative" || phase === "realizational" ? "VH" : "H";
+  }
+  function generatePlan(profile, cycle) {
+    const effectiveWeeks = cycle.testWeek ?? cycle.cycleLengthWeeks;
+    const peaking = cycle.testWeek !== void 0;
+    const lengths = partition(effectiveWeeks);
+    const phases = sequence(lengths.length, profile.status, peaking);
+    const blocks = lengths.map((lengthWk, i) => {
+      const phase = phases[i];
+      const target = targetRatio(profile.status, phase);
+      const N = exposuresPerMicrocycle(profile.daysPerWeek, phase);
+      const budget = composeBudget(target, boundsFor(profile.status, profile.daysPerWeek), N);
+      const methods = ["ME", "DE", "RE"];
+      const prescriptions = methods.filter((m) => budget.exposures[m] > 0).map((method) => {
+        const zone = zoneFor(method, phase, profile.status, profile.vhEligible);
+        return { method, zone, rmTarget: ZONE_RM[zone] };
+      });
+      return { index: i, lengthWk, phase, budget, prescriptions };
+    });
+    return { profile, cycle, blocks };
+  }
+
+  // src/plates.ts
+  function reachableLoads(inv, bar = BAR_KG) {
+    let sides = /* @__PURE__ */ new Set([0]);
+    for (const [kgStr, count] of Object.entries(inv)) {
+      const kg = Number(kgStr);
+      const next = new Set(sides);
+      for (const s of sides) {
+        for (let c = 1; c <= count; c++) next.add(+(s + kg * c).toFixed(3));
+      }
+      sides = next;
+    }
+    const totals = [...sides].map((s) => +(bar + 2 * s).toFixed(3));
+    return [...new Set(totals)].sort((a, b) => a - b);
+  }
+  function roundToPlates(target, inv, bar = BAR_KG) {
+    const reach = reachableLoads(inv, bar);
+    let best = reach[0];
+    for (const r of reach) {
+      const d = Math.abs(r - target);
+      const bd = Math.abs(best - target);
+      if (d < bd || d === bd && r < best) best = r;
+    }
+    return best;
+  }
+  function platesForLoad(load, inv, bar = BAR_KG) {
+    let side = (load - bar) / 2;
+    if (side < 0.01) return [];
+    const denoms = Object.keys(inv).map(Number).sort((a, b) => b - a);
+    const avail = { ...inv };
+    const out = [];
+    for (const d of denoms) {
+      while (side >= d - 1e-9 && (avail[d] ?? 0) > 0) {
+        out.push(d);
+        side = +(side - d).toFixed(3);
+        avail[d]--;
+      }
+    }
+    return out;
+  }
+
+  // src/loads.ts
+  function prescribeLoad(zone, e1rm, inv, bar = BAR_KG) {
+    const pct = ZONE_PCT[zone];
+    const target = +(pct * e1rm).toFixed(1);
+    return { zone, pctOf1rm: pct, targetLoad: target, roundedLoad: roundToPlates(target, inv, bar) };
+  }
+
+  // src/readiness.ts
+  function composite(c, status) {
+    const w = READINESS.weights;
+    const sorenessVals = Object.values(c.soreness);
+    const systemic = sorenessVals.length ? sorenessVals.reduce((a, b) => a + b, 0) / sorenessVals.length : 1;
+    const sScale = status === "advanced" ? READINESS.advancedSorenessScale : 1;
+    const e = (c.energy - 1) / 4;
+    const s = (c.sleep - 1) / 4;
+    const sor = (5 - systemic) / 4;
+    const raw = w.energy * e + w.sleep * s + w.soreness * sScale * sor;
+    const norm = raw / (w.energy + w.sleep + w.soreness * sScale);
+    const score = Math.round(norm * 100);
+    const band = score >= READINESS.bands.greenMin ? "green" : score <= READINESS.bands.redMax ? "red" : "amber";
+    return { score, band };
+  }
+  var LADDER = ["VL", "L", "M", "H", "VH"];
+  function downShift(zone, steps) {
+    if (zone === "P") return "P";
+    const i = LADDER.indexOf(zone);
+    return LADDER[Math.max(0, i - steps)];
+  }
+  function modulate(plannedZone, band, liftSoreness) {
+    const isLight = plannedZone === "VL" || plannedZone === "L";
+    if (liftSoreness >= READINESS.localSorenessVeto) {
+      return { zone: downShift(plannedZone, 1), action: "local_down", downRegulated: true };
+    }
+    if (band === "green") return { zone: plannedZone, action: "proceed", downRegulated: false };
+    if (band === "amber") return { zone: downShift(plannedZone, 1), action: "zone_down", downRegulated: true };
+    if (isLight) return { zone: plannedZone, action: "trim_volume", downRegulated: true };
+    return { zone: downShift(plannedZone, 1), action: "zone_down", downRegulated: true };
+  }
+
+  // src/substitution.ts
+  var SUB_CONFIG = {
+    muscleFloor: 0.5,
+    // below this overlap → rejected (good-morning-as-squat fails at 0.5)
+    acceptanceFloor: 0.5
+    // best total below this → weak_match
+  };
+  var jaccard = (a, b) => {
+    const A = new Set(a), B = new Set(b);
+    const inter = [...A].filter((x) => B.has(x)).length;
+    const uni = (/* @__PURE__ */ new Set([...a, ...b])).size;
+    return uni === 0 ? 0 : inter / uni;
+  };
+  function amplitudeMatch(a, b) {
+    const joints = /* @__PURE__ */ new Set([...Object.keys(a.emphasis), ...Object.keys(b.emphasis)]);
+    let l1 = 0;
+    for (const j of joints) l1 += Math.abs((a.emphasis[j] ?? 0) - (b.emphasis[j] ?? 0));
+    return 1 - l1 / 2;
+  }
+  function equipmentAvailable(ex, available) {
+    return ex.equipment.every((e) => available.includes(e));
+  }
+  function scoreCandidate(reference, candidate, intent) {
+    const amplitude = amplitudeMatch(reference, candidate);
+    const muscle = jaccard(reference.muscles, candidate.muscles);
+    const dynamics = reference.dynamics === candidate.dynamics ? 1 : 0.5;
+    const pattern = reference.pattern === candidate.pattern ? 1 : 0;
+    const similarity = 0.5 * amplitude + 0.5 * muscle;
+    const novelty = 1 - similarity;
+    const axes = { amplitude, muscle, dynamics, pattern, novelty };
+    if (muscle < SUB_CONFIG.muscleFloor) {
+      return { candidate, total: 0, axes, accepted: false, reason: "muscle_floor" };
+    }
+    let total;
+    if (intent === "equipment_swap") {
+      total = 0.35 * amplitude + 0.35 * muscle + 0.15 * dynamics + 0.15 * pattern;
+    } else {
+      total = 0.3 * muscle + 0.1 * pattern + 0.1 * dynamics + 0.5 * novelty;
+    }
+    return { candidate, total: +total.toFixed(3), axes, accepted: true };
+  }
+  function substitute(reference, candidates, intent, available) {
+    const scored = candidates.filter((c) => c.id !== reference.id || intent === "equipment_swap").filter((c) => equipmentAvailable(c, available)).map((c) => scoreCandidate(reference, c, intent)).sort((a, b) => b.total - a.total);
+    const accepted = scored.filter((s) => s.accepted);
+    const best = accepted[0] ?? null;
+    const weakMatch = best === null || best.total < SUB_CONFIG.acceptanceFloor;
+    return { best, ranked: scored, weakMatch };
+  }
+
+  // src/exercises.ts
+  var EXERCISES = [
+    {
+      id: "back_squat",
+      name: "Back squat (high-bar)",
+      pattern: "squat",
+      emphasis: { hip: 0.4, knee: 0.35, ankle: 0.1, trunk: 0.15 },
+      muscles: ["quadriceps", "glutes", "adductors", "erectors"],
+      equipment: ["barbell", "rack"],
+      dynamics: "max_force"
+    },
+    {
+      id: "front_squat",
+      name: "Front squat",
+      pattern: "squat",
+      emphasis: { hip: 0.3, knee: 0.45, ankle: 0.1, trunk: 0.15 },
+      muscles: ["quadriceps", "glutes", "adductors", "erectors"],
+      equipment: ["barbell", "rack"],
+      dynamics: "max_force"
+    },
+    {
+      id: "goblet_squat",
+      name: "Goblet squat",
+      pattern: "squat",
+      emphasis: { hip: 0.38, knee: 0.37, ankle: 0.1, trunk: 0.15 },
+      muscles: ["quadriceps", "glutes", "adductors", "erectors"],
+      equipment: ["dumbbell"],
+      dynamics: "hypertrophy"
+    },
+    {
+      id: "bulgarian_ss",
+      name: "Bulgarian split squat",
+      pattern: "squat",
+      emphasis: { hip: 0.42, knee: 0.38, ankle: 0.1, trunk: 0.1 },
+      muscles: ["quadriceps", "glutes", "adductors"],
+      equipment: ["dumbbell"],
+      unilateral: true,
+      dynamics: "hypertrophy"
+    },
+    {
+      id: "leg_press",
+      name: "Leg press",
+      pattern: "squat",
+      emphasis: { hip: 0.4, knee: 0.5, ankle: 0.05, trunk: 0.05 },
+      muscles: ["quadriceps", "glutes"],
+      equipment: ["machine"],
+      dynamics: "hypertrophy"
+    },
+    {
+      id: "good_morning",
+      name: "Good morning",
+      pattern: "hinge",
+      emphasis: { hip: 0.5, knee: 0.1, ankle: 0.05, trunk: 0.35 },
+      muscles: ["hamstrings", "glutes", "erectors"],
+      equipment: ["barbell", "rack"],
+      dynamics: "max_force"
+    },
+    // --- squat pattern (more) ---
+    { id: "lowbar_squat_ex", name: "Low-bar back squat", pattern: "squat", emphasis: { hip: 0.45, knee: 0.3, ankle: 0.1, trunk: 0.15 }, muscles: ["quadriceps", "glutes", "adductors", "erectors"], equipment: ["barbell", "rack"], dynamics: "max_force" },
+    { id: "hack_squat_ex", name: "Hack squat", pattern: "squat", emphasis: { hip: 0.3, knee: 0.55, ankle: 0.1, trunk: 0.05 }, muscles: ["quadriceps", "glutes"], equipment: ["machine"], dynamics: "hypertrophy" },
+    { id: "walking_lunge_ex", name: "Walking lunge", pattern: "squat", emphasis: { hip: 0.45, knee: 0.4, ankle: 0.1, trunk: 0.05 }, muscles: ["quadriceps", "glutes", "adductors"], equipment: ["dumbbell"], unilateral: true, dynamics: "hypertrophy" },
+    // --- press pattern (new) ---
+    { id: "bench_press_ex", name: "Bench press", pattern: "press", emphasis: { shoulder: 0.45, elbow: 0.4, trunk: 0.15 }, muscles: ["chest", "triceps", "delts"], equipment: ["barbell", "bench"], dynamics: "max_force" },
+    { id: "cg_bench_ex", name: "Close-grip bench press", pattern: "press", emphasis: { shoulder: 0.35, elbow: 0.5, trunk: 0.15 }, muscles: ["triceps", "chest", "delts"], equipment: ["barbell", "bench"], dynamics: "max_force" },
+    { id: "incline_press_ex", name: "Incline barbell press", pattern: "press", emphasis: { shoulder: 0.5, elbow: 0.35, trunk: 0.15 }, muscles: ["chest", "delts", "triceps"], equipment: ["barbell", "bench"], dynamics: "hypertrophy" },
+    { id: "db_bench_ex", name: "DB bench press", pattern: "press", emphasis: { shoulder: 0.45, elbow: 0.4, trunk: 0.15 }, muscles: ["chest", "triceps", "delts"], equipment: ["dumbbell", "bench"], dynamics: "hypertrophy" },
+    { id: "floor_press_ex", name: "Floor press", pattern: "press", emphasis: { shoulder: 0.4, elbow: 0.5, trunk: 0.1 }, muscles: ["triceps", "chest", "delts"], equipment: ["barbell", "bench"], dynamics: "max_force" },
+    { id: "ohp_ex", name: "Overhead press", pattern: "press", emphasis: { shoulder: 0.55, elbow: 0.35, trunk: 0.1 }, muscles: ["delts", "triceps", "chest"], equipment: ["barbell"], dynamics: "max_force" },
+    { id: "dip_ex", name: "Dip", pattern: "press", emphasis: { shoulder: 0.45, elbow: 0.4, trunk: 0.15 }, muscles: ["chest", "triceps", "delts"], equipment: ["bodyweight"], dynamics: "hypertrophy" },
+    { id: "pushup_ex", name: "Push-up", pattern: "press", emphasis: { shoulder: 0.45, elbow: 0.4, trunk: 0.15 }, muscles: ["chest", "triceps", "delts"], equipment: ["bodyweight"], dynamics: "hypertrophy" },
+    // --- hinge pattern (new) ---
+    { id: "conv_dl_ex", name: "Conventional deadlift", pattern: "hinge", emphasis: { hip: 0.55, knee: 0.2, trunk: 0.25 }, muscles: ["hamstrings", "glutes", "erectors", "lats"], equipment: ["barbell"], dynamics: "max_force" },
+    { id: "sumo_dl_ex", name: "Sumo deadlift", pattern: "hinge", emphasis: { hip: 0.5, knee: 0.3, trunk: 0.2 }, muscles: ["hamstrings", "glutes", "quadriceps", "adductors"], equipment: ["barbell"], dynamics: "max_force" },
+    { id: "trap_bar_ex", name: "Trap-bar deadlift", pattern: "hinge", emphasis: { hip: 0.45, knee: 0.35, trunk: 0.2 }, muscles: ["hamstrings", "glutes", "quadriceps"], equipment: ["barbell"], dynamics: "max_force" },
+    { id: "rdl_ex", name: "Romanian deadlift", pattern: "hinge", emphasis: { hip: 0.6, knee: 0.1, trunk: 0.3 }, muscles: ["hamstrings", "glutes", "erectors"], equipment: ["barbell"], dynamics: "hypertrophy" },
+    { id: "hip_thrust_ex", name: "Barbell hip thrust", pattern: "hinge", emphasis: { hip: 0.75, knee: 0.15, trunk: 0.1 }, muscles: ["glutes", "hamstrings"], equipment: ["barbell", "bench"], dynamics: "hypertrophy" },
+    { id: "kb_swing_ex", name: "Kettlebell swing", pattern: "hinge", emphasis: { hip: 0.7, knee: 0.15, trunk: 0.15 }, muscles: ["glutes", "hamstrings", "erectors"], equipment: ["dumbbell"], dynamics: "explosive" },
+    { id: "ghr_ex", name: "Glute-ham raise", pattern: "hinge", emphasis: { hip: 0.4, knee: 0.4, trunk: 0.2 }, muscles: ["hamstrings", "glutes"], equipment: ["machine"], dynamics: "hypertrophy" }
+  ];
+  var byId = (id) => EXERCISES.find((e) => e.id === id);
+  var ACCESSORIES = [
+    // squat emphasis
+    { id: "hip_thrust", name: "Barbell hip thrust", tier: "B", emphasis: ["squat"], muscles: ["glutes"], equipment: ["barbell", "bench"], sets: 3, reps: "10", restSec: 90, cue: "Drive hips up, ribs down; squeeze glutes hard at the top for a 1s hold." },
+    { id: "goblet_squat_a", name: "DB goblet squat (heels elevated)", tier: "B", emphasis: ["squat"], muscles: ["quadriceps", "glutes"], equipment: ["dumbbell"], sets: 3, reps: "12", restSec: 90, cue: "DB at the chest, elbows inside the knees, heels slightly elevated for quad bias." },
+    { id: "bss", name: "Bulgarian split squat", tier: "C", emphasis: ["squat"], muscles: ["quadriceps", "glutes"], equipment: ["dumbbell"], sets: 3, reps: "10 / leg", restSec: 60, cue: "Torso leaning slightly forward for quad engagement; control the descent." },
+    { id: "back_ext", name: "Back extension", tier: "C", emphasis: ["squat", "deadlift"], muscles: ["erectors", "glutes", "hamstrings"], equipment: ["machine"], sets: 3, reps: "12", restSec: 60, cue: "Hinge and squeeze glutes at the top; don't hyperextend the low back." },
+    { id: "pallof", name: "Pallof press", tier: "C", emphasis: ["squat", "deadlift"], muscles: ["core"], equipment: ["cable"], sets: 3, reps: "12 / side", restSec: 60, cue: "Brace hard and press straight out; resist the rotation, don't create it." },
+    // bench emphasis
+    { id: "cgbp", name: "Close-grip bench press", tier: "B", emphasis: ["bench"], muscles: ["triceps", "chest"], equipment: ["barbell", "bench"], sets: 3, reps: "8", restSec: 120, cue: "Shoulder-width grip, elbows tucked; bar to the lower sternum." },
+    { id: "incline_db", name: "Incline DB press", tier: "B", emphasis: ["bench"], muscles: ["chest", "delts"], equipment: ["dumbbell", "bench"], sets: 3, reps: "10", restSec: 90, cue: "30\xB0 incline; full stretch at the bottom, don't clack the DBs at the top." },
+    { id: "db_row", name: "One-arm DB row", tier: "C", emphasis: ["bench"], muscles: ["lats", "upper_back"], equipment: ["dumbbell", "bench"], sets: 3, reps: "10 / side", restSec: 60, cue: "Antagonist balance for the press; row to the hip, no torso english." },
+    { id: "lateral_raise", name: "DB lateral raise", tier: "C", emphasis: ["bench"], muscles: ["delts"], equipment: ["dumbbell"], sets: 3, reps: "15", restSec: 45, cue: "Lead with the elbows; slow and strict, no swing." },
+    // deadlift emphasis
+    { id: "rdl", name: "Romanian deadlift", tier: "B", emphasis: ["deadlift"], muscles: ["hamstrings", "glutes"], equipment: ["barbell"], sets: 3, reps: "8", restSec: 120, cue: "Push the hips back with soft knees; feel the hamstring stretch, bar close to the legs." },
+    { id: "bb_row", name: "Barbell row", tier: "B", emphasis: ["deadlift"], muscles: ["lats", "upper_back", "erectors"], equipment: ["barbell"], sets: 3, reps: "8", restSec: 90, cue: "Flat back ~45\xB0; row to the lower chest, control the eccentric." },
+    { id: "pullup", name: "Pull-up", tier: "C", emphasis: ["deadlift"], muscles: ["lats"], equipment: ["bodyweight"], sets: 3, reps: "AMRAP", restSec: 90, cue: "Full hang to chin over the bar; add load if you clear 12." },
+    { id: "hlr", name: "Hanging leg raise", tier: "C", emphasis: ["deadlift"], muscles: ["core"], equipment: ["bodyweight"], sets: 3, reps: "12", restSec: 60, cue: "Control the legs up and down; no kipping or swing." },
+    // --- added accessories (OURS) ---
+    { id: "leg_press_a", name: "Leg press", tier: "B", emphasis: ["squat"], muscles: ["quadriceps", "glutes"], equipment: ["machine"], sets: 3, reps: "12", restSec: 90, cue: "Mid-foot drive, controlled depth; quad and glute volume without spinal load." },
+    { id: "walking_lunge_a", name: "Walking lunge", tier: "C", emphasis: ["squat"], muscles: ["quadriceps", "glutes"], equipment: ["dumbbell"], sets: 3, reps: "10 / leg", restSec: 60, cue: "Long stride, vertical torso; control the knee tracking." },
+    { id: "leg_curl", name: "Lying leg curl", tier: "C", emphasis: ["squat", "deadlift"], muscles: ["hamstrings"], equipment: ["machine"], sets: 3, reps: "12", restSec: 60, cue: "Squeeze at full flexion; slow the eccentric." },
+    { id: "leg_ext", name: "Leg extension", tier: "C", emphasis: ["squat"], muscles: ["quadriceps"], equipment: ["machine"], sets: 3, reps: "15", restSec: 45, cue: "Pause and squeeze at the top; no swinging." },
+    { id: "calf_raise", name: "Standing calf raise", tier: "C", emphasis: ["squat"], muscles: ["calves"], equipment: ["machine"], sets: 4, reps: "12", restSec: 45, cue: "Full stretch at the bottom, hold the top; don't bounce." },
+    { id: "ohp_a", name: "Overhead press", tier: "B", emphasis: ["bench"], muscles: ["delts", "triceps"], equipment: ["barbell"], sets: 3, reps: "8", restSec: 120, cue: "Brace, bar over the mid-foot; press through and finish with the head 'through the window'." },
+    { id: "dip_a", name: "Weighted dip", tier: "B", emphasis: ["bench"], muscles: ["chest", "triceps"], equipment: ["bodyweight"], sets: 3, reps: "10", restSec: 90, cue: "Slight forward lean for chest; full depth, control the bottom." },
+    { id: "tri_pushdown", name: "Triceps pushdown", tier: "C", emphasis: ["bench"], muscles: ["triceps"], equipment: ["cable"], sets: 3, reps: "15", restSec: 45, cue: "Elbows pinned; full lockout, slow return." },
+    { id: "face_pull", name: "Face pull", tier: "C", emphasis: ["bench"], muscles: ["upper_back", "delts"], equipment: ["cable"], sets: 3, reps: "15", restSec: 45, cue: "Pull to the forehead, externally rotate; rear delts and shoulder health." },
+    { id: "pec_fly", name: "Cable fly", tier: "C", emphasis: ["bench"], muscles: ["chest"], equipment: ["cable"], sets: 3, reps: "15", restSec: 45, cue: "Soft elbows, hug the midline; stretch and squeeze, no pressing." },
+    { id: "ghr_a", name: "Glute-ham raise", tier: "B", emphasis: ["deadlift"], muscles: ["hamstrings", "glutes"], equipment: ["machine"], sets: 3, reps: "10", restSec: 90, cue: "Lower slowly under control; assist with a push only if needed." },
+    { id: "sg_rdl", name: "Snatch-grip RDL", tier: "B", emphasis: ["deadlift"], muscles: ["hamstrings", "glutes", "upper_back"], equipment: ["barbell"], sets: 3, reps: "8", restSec: 90, cue: "Wide grip, hips back; extra upper-back and hamstring loading." },
+    { id: "cs_row", name: "Chest-supported row", tier: "B", emphasis: ["deadlift", "bench"], muscles: ["lats", "upper_back"], equipment: ["dumbbell", "bench"], sets: 3, reps: "10", restSec: 90, cue: "Chest on the pad to kill momentum; row to the ribs, squeeze the mid-back." },
+    { id: "shrug", name: "Barbell shrug", tier: "C", emphasis: ["deadlift"], muscles: ["upper_back"], equipment: ["barbell"], sets: 3, reps: "12", restSec: 60, cue: "Straight up, brief hold at the top; no rolling." },
+    { id: "lat_pulldown", name: "Lat pulldown", tier: "C", emphasis: ["deadlift"], muscles: ["lats"], equipment: ["cable"], sets: 3, reps: "12", restSec: 60, cue: "Drive the elbows down to the ribs; full stretch at the top." }
+  ];
+
+  // src/e1rm.ts
+  function epley(load, reps) {
+    if (reps <= 1) return load;
+    return load * (1 + reps / 30);
+  }
+  function eligibleForE1rm(s) {
+    const okType = s.setType === "working" || s.setType === "amrap" || s.setType === "failure";
+    return okType && s.reps <= 8 && s.rpe >= 8 && !s.downRegulated;
+  }
+  function e1rmFromHistory(sets, lift) {
+    const elig = sets.filter((s) => s.lift === lift && eligibleForE1rm(s));
+    if (elig.length === 0) return null;
+    return Math.max(...elig.map((s) => epley(s.load, s.reps)));
+  }
+
+  // src/logger.ts
+  function logAgainst(planned, actual, downRegulated = false) {
+    return {
+      lift: planned.lift,
+      method: planned.method,
+      setType: planned.setType,
+      // inherited from the plan (free provenance)
+      load: actual.load,
+      reps: actual.reps,
+      rpe: actual.rpe,
+      downRegulated
+    };
+  }
+  function rebaseline(prev, blockLog, lifts) {
+    const out = { ...prev };
+    for (const lift of lifts) {
+      const derived = e1rmFromHistory(blockLog, lift);
+      if (derived !== null) out[lift] = Math.max(prev[lift], derived);
+    }
+    return out;
+  }
+  function tonnageByMethod(sets) {
+    const out = {};
+    for (const s of sets) {
+      if (s.setType === "warmup" || s.setType === "unknown") continue;
+      const m = s.method ?? "?";
+      out[m] = (out[m] ?? 0) + s.load * s.reps;
+    }
+    return out;
+  }
+
+  // src/accessory.ts
+  var VOL = {
+    accumulative: { B: 2, C: 2 },
+    transmutative: { B: 1, C: 1 },
+    realizational: { B: 0, C: 1 },
+    // taper — only light core/health work
+    deload: { B: 1, C: 1 }
+  };
+  function selectAccessories(emphasis, phase, available, trim = false, excludeNames = [], rotate = 0) {
+    let vol = VOL[phase] ?? { B: 1, C: 1 };
+    if (trim) vol = { B: Math.max(0, vol.B - 1), C: Math.max(0, vol.C - 1) };
+    const pool = ACCESSORIES.filter(
+      (a) => a.emphasis.includes(emphasis) && a.equipment.every((e) => available.includes(e)) && !excludeNames.map((n) => n.trim().toLowerCase()).includes(a.name.trim().toLowerCase())
+      // never repeat the day's main/speed movement as an accessory
+    );
+    const rot = (arr) => arr.length ? arr.slice(rotate % arr.length).concat(arr.slice(0, rotate % arr.length)) : arr;
+    const Bs = rot(pool.filter((a) => a.tier === "B")).slice(0, vol.B).map((a, i) => ({ ...a, slot: `B${i + 1}` }));
+    const Cs = rot(pool.filter((a) => a.tier === "C")).slice(0, vol.C).map((a, i) => ({ ...a, slot: `C${i + 1}` }));
+    return [...Bs, ...Cs];
+  }
+
+  // src/mains.ts
+  var MAIN_MOVEMENTS = [
+    // squat
+    { id: "comp_squat", name: "Back squat", lift: "squat", specificity: 1, loadFactor: 1, methods: ["ME", "DE", "RE"], equipment: ["barbell", "rack"], cue: "Competition stance and bar position." },
+    { id: "paused_squat", name: "Paused back squat", lift: "squat", specificity: 0.92, loadFactor: 0.9, methods: ["ME", "RE"], equipment: ["barbell", "rack"], cue: "3s pause in the hole, stand without bouncing \u2014 builds the bottom." },
+    { id: "front_squat_m", name: "Front squat", lift: "squat", specificity: 0.82, loadFactor: 0.78, methods: ["ME", "RE"], equipment: ["barbell", "rack"], cue: "Elbows high, upright torso; quad-biased SPP work." },
+    { id: "tempo_squat", name: "Tempo back squat", lift: "squat", specificity: 0.85, loadFactor: 0.85, methods: ["RE", "DE"], equipment: ["barbell", "rack"], cue: "3s controlled descent, no pause; positional strength." },
+    // bench
+    { id: "comp_bench", name: "Bench press", lift: "bench", specificity: 1, loadFactor: 1, methods: ["ME", "DE", "RE"], equipment: ["barbell", "bench"], cue: "Competition grip and setup." },
+    { id: "paused_bench", name: "Paused bench press", lift: "bench", specificity: 0.95, loadFactor: 0.95, methods: ["ME", "RE"], equipment: ["barbell", "bench"], cue: "1s pause on the chest, explode up." },
+    { id: "cg_bench_m", name: "Close-grip bench press", lift: "bench", specificity: 0.85, loadFactor: 0.9, methods: ["ME", "RE"], equipment: ["barbell", "bench"], cue: "Shoulder-width grip; triceps and lockout." },
+    { id: "spoto_press", name: "Spoto press", lift: "bench", specificity: 0.9, loadFactor: 0.85, methods: ["RE", "DE"], equipment: ["barbell", "bench"], cue: "Pause an inch off the chest; control and tightness." },
+    // deadlift
+    { id: "comp_deadlift", name: "Deadlift", lift: "deadlift", specificity: 1, loadFactor: 1, methods: ["ME", "DE", "RE"], equipment: ["barbell"], cue: "Competition stance; brace and push the floor away." },
+    { id: "deficit_dl", name: "Deficit deadlift", lift: "deadlift", specificity: 0.85, loadFactor: 0.85, methods: ["ME", "RE"], equipment: ["barbell"], cue: "Stand on a 1\u20132in deficit; extra range off the floor." },
+    { id: "paused_dl", name: "Paused deadlift", lift: "deadlift", specificity: 0.9, loadFactor: 0.9, methods: ["ME", "RE"], equipment: ["barbell"], cue: "Pause 1\u20132in off the floor; builds the start." },
+    { id: "tempo_dl", name: "Tempo deadlift", lift: "deadlift", specificity: 0.85, loadFactor: 0.8, methods: ["RE", "DE"], equipment: ["barbell"], cue: "Controlled 3s lower; positional control." },
+    // --- added variations (OURS; the phase→specificity gradient is the grounded part) ---
+    { id: "lowbar_squat", name: "Low-bar back squat", lift: "squat", specificity: 0.97, loadFactor: 1, methods: ["ME", "DE", "RE"], equipment: ["barbell", "rack"], cue: "Bar on the rear delts, more hip drive; the most comp-specific squat." },
+    { id: "box_squat", name: "Box squat", lift: "squat", specificity: 0.88, loadFactor: 0.9, methods: ["ME", "DE"], equipment: ["barbell", "rack", "bench"], cue: "Sit back to a parallel box, pause, drive up \u2014 teaches the hips." },
+    { id: "pin_squat", name: "Pin squat", lift: "squat", specificity: 0.86, loadFactor: 0.85, methods: ["ME"], equipment: ["barbell", "rack"], cue: "Dead-stop from pins at the sticking height; concentric strength." },
+    { id: "ssb_squat", name: "SSB squat", lift: "squat", specificity: 0.84, loadFactor: 0.85, methods: ["ME", "RE"], equipment: ["barbell", "rack"], cue: "Safety bar; upright torso, kinder to the shoulders." },
+    { id: "larsen_press", name: "Larsen press", lift: "bench", specificity: 0.88, loadFactor: 0.9, methods: ["ME", "RE"], equipment: ["barbell", "bench"], cue: "Feet up, no leg drive; raw upper-body strength and stability." },
+    { id: "floor_press", name: "Floor press", lift: "bench", specificity: 0.86, loadFactor: 0.9, methods: ["ME"], equipment: ["barbell", "bench"], cue: "Triceps from a dead stop on the floor; overloads the lockout." },
+    { id: "two_board", name: "2-board press", lift: "bench", specificity: 0.9, loadFactor: 0.97, methods: ["ME"], equipment: ["barbell", "bench"], cue: "Reduced range to a board; lockout overload." },
+    { id: "wide_bench", name: "Wide-grip bench press", lift: "bench", specificity: 0.88, loadFactor: 0.95, methods: ["RE"], equipment: ["barbell", "bench"], cue: "Wider than comp grip; chest and bottom-end strength." },
+    { id: "block_pull", name: "Block pull", lift: "deadlift", specificity: 0.88, loadFactor: 1.05, methods: ["ME"], equipment: ["barbell"], cue: "Bar on blocks just below the knee; overloads the top half." },
+    { id: "snatch_grip_dl", name: "Snatch-grip deadlift", lift: "deadlift", specificity: 0.82, loadFactor: 0.82, methods: ["ME", "RE"], equipment: ["barbell"], cue: "Wide grip, extra range; upper back and off-the-floor strength." },
+    { id: "pin_pull", name: "Pin pull", lift: "deadlift", specificity: 0.86, loadFactor: 1, methods: ["ME"], equipment: ["barbell", "rack"], cue: "Dead-stop from pins at a chosen height; positional strength." }
+  ];
+  function selectMain(lift, method, phase, blockIndex, available) {
+    const all = MAIN_MOVEMENTS.filter((m) => m.lift === lift);
+    const comp = all.find((m) => m.specificity === 1);
+    const compOk = comp.equipment.every((e) => available.includes(e));
+    if ((phase === "realizational" || method === "ME" && phase === "transmutative") && compOk) {
+      return comp;
+    }
+    const cands = all.filter((m) => m.methods.includes(method) && m.equipment.every((e) => available.includes(e)));
+    if (cands.length === 0) return comp;
+    const variations = cands.filter((m) => m.specificity < 1).sort((a, b) => b.specificity - a.specificity);
+    if (phase === "accumulative" && variations.length) {
+      return variations[blockIndex % variations.length];
+    }
+    const pool = [comp, ...variations.filter((v) => v.specificity >= 0.9)];
+    return pool[blockIndex % pool.length];
+  }
+
+  // src/session.ts
+  var RPE = {
+    VH: "@9\u201310",
+    H: "@8",
+    M: "@7\u20138",
+    L: "@7",
+    VL: "@6\u20137",
+    P: "fast \xB7 @6"
+  };
+  var EX = { squat: "Back squat", bench: "Bench press", deadlift: "Deadlift" };
+  function expand(day, order, lift, method, zone, e1rm, inv, bar, downRegulated = false) {
+    const s = ZONE_SCHEME[zone];
+    return {
+      day,
+      order,
+      lift,
+      exercise: EX[lift] ?? lift,
+      method,
+      zone,
+      sets: s.sets,
+      reps: s.reps,
+      load: roundToPlates(ZONE_PCT[zone] * e1rm, inv, bar),
+      rest: `${s.restMin}\u2013${s.restMax} min`,
+      rpe: RPE[zone],
+      downRegulated
+    };
+  }
+  var LAYOUT_3 = [
+    [["squat", "ME"], ["bench", "DE"]],
+    // Day 1 — squat heavy
+    [["bench", "ME"], ["squat", "RE"]],
+    // Day 2 — bench heavy
+    [["deadlift", "ME"], ["bench", "RE"], ["squat", "DE"]]
+    // Day 3 — pull + volume + speed
+  ];
+  var ORDER = { ME: 0, DE: 1, RE: 2 };
+  function buildWeek(zones, e1rms, inv, bar, mod) {
+    return LAYOUT_3.map(
+      (day, di) => day.filter(([, m]) => zones[m]).map(([lift, m]) => {
+        let zone = zones[m];
+        let down = false;
+        if (mod) {
+          const r = mod(zone, lift);
+          zone = r.zone;
+          down = r.down;
+        }
+        return expand(di + 1, ORDER[m], lift, m, zone, e1rms[lift], inv, bar, down);
+      }).sort((a, b) => a.order - b.order)
+    );
+  }
+  var SPEED = {
+    sets: 6,
+    reps: 3,
+    restSec: 60,
+    pct: 0.55,
+    cue: "~55% \u2014 every rep as explosive as you can. No bar-speed tool here, so the speed is on you: when a rep stops feeling fast, end the set."
+  };
+  var SPEED_PHASES = ["accumulative", "transmutative"];
+  var METHOD_CUE = {
+    ME: "Work up to a heavy top set; full intent, leave ~1 in the tank.",
+    DE: "Sub-maximal load moved with maximal speed; reset each rep.",
+    RE: "Controlled reps to ~1\u20132 in reserve; the last reps count most."
+  };
+  var PHASE_METHOD = {
+    accumulative: "RE",
+    transmutative: "ME",
+    realizational: "ME",
+    deload: "RE"
+  };
+  function dominantMethod(exposures) {
+    const methods = ["ME", "DE", "RE"];
+    return methods.reduce((a, b) => (exposures[b] || 0) > (exposures[a] || 0) ? b : a, "RE");
+  }
+  function mainMethod(phase, zones, exposures) {
+    const pm = PHASE_METHOD[phase];
+    return zones[pm] ? pm : dominantMethod(exposures);
+  }
+  var LIFT_RANK = { squat: 0, bench: 1, deadlift: 2 };
+  function sequenceDays(sessions) {
+    const remaining = [...sessions];
+    const out = [];
+    let prev = null;
+    while (remaining.length) {
+      const counts = {};
+      for (const s of remaining) counts[s.lift] = (counts[s.lift] || 0) + 1;
+      let lifts = Object.keys(counts).filter((l) => l !== prev);
+      if (lifts.length === 0) lifts = Object.keys(counts);
+      lifts.sort((a, b) => counts[b] - counts[a] || LIFT_RANK[a] - LIFT_RANK[b]);
+      const idx = remaining.findIndex((s) => s.lift === lifts[0]);
+      out.push(remaining[idx]);
+      prev = lifts[0];
+      remaining.splice(idx, 1);
+    }
+    return out;
+  }
+  function buildFullWeek(zones, exposures, e1rms, inv, bar, phase, blockIndex, available, speedWork = false, speedOrder = "before", mod, trimAccessories = false, daysPerWeek = 3, freqPriority = "bench") {
+    const emphasis = mainMethod(phase, zones, exposures);
+    const secondary = emphasis === "ME" ? "RE" : "ME";
+    const baseLifts = ["squat", "bench", "deadlift"];
+    const lifts = baseLifts.map((_, i) => baseLifts[(i + blockIndex) % 3]);
+    const dayPlan = [];
+    for (let i = 0; i < Math.min(daysPerWeek, 3); i++) dayPlan.push({ lift: lifts[i], method: emphasis });
+    const base = ["bench", "squat", "deadlift"];
+    const extraOrder = [freqPriority, ...base.filter((l) => l !== freqPriority)];
+    for (let i = 3; i < daysPerWeek; i++) dayPlan.push({ lift: extraOrder[(i - 3) % 3], method: secondary });
+    return sequenceDays(dayPlan).map(({ lift, method }) => {
+      let zone = zones[method] ?? zones[emphasis];
+      let down = false;
+      if (mod) {
+        const r = mod(zone, lift);
+        zone = r.zone;
+        down = r.down;
+      }
+      const mv = selectMain(lift, method, phase, blockIndex, available);
+      const sch = ZONE_SCHEME[zone];
+      const items = [];
+      const speedItem = speedWork && SPEED_PHASES.includes(phase) && !trimAccessories ? {
+        group: "speed",
+        lift,
+        name: `Speed ${(EX[lift] ?? lift).toLowerCase()}`,
+        sets: SPEED.sets,
+        reps: String(SPEED.reps),
+        load: roundToPlates(SPEED.pct * e1rms[lift], inv, bar),
+        rest: `${SPEED.restSec}s`,
+        rpe: "explosive",
+        method: "DE",
+        zone: "P",
+        cue: SPEED.cue
+      } : null;
+      if (speedItem && speedOrder === "before") items.push(speedItem);
+      items.push({
+        group: "main",
+        lift,
+        name: mv.name,
+        sets: sch.sets,
+        reps: String(sch.reps),
+        load: roundToPlates(ZONE_PCT[zone] * e1rms[lift] * mv.loadFactor, inv, bar),
+        rest: `${sch.restMin}\u2013${sch.restMax} min`,
+        rpe: RPE[zone],
+        method,
+        zone,
+        downRegulated: down,
+        cue: mv.cue + " " + METHOD_CUE[method]
+      });
+      if (speedItem && speedOrder === "after") items.push(speedItem);
+      const used = [mv.name, ...speedItem ? [speedItem.name] : []];
+      for (const a of selectAccessories(lift, phase, available, trimAccessories, used, blockIndex)) {
+        items.push({ group: a.tier === "B" ? "accessory" : "core", name: a.name, sets: a.sets, reps: a.reps, rest: `${a.restSec}s`, cue: a.cue });
+      }
+      return items;
+    });
+  }
+
+  // src/web.ts
+  var KITS = {
+    lb: { bar: 45, plates: { 45: 5, 35: 1, 25: 2, 10: 2, 5: 2, 2.5: 2 } },
+    kg: { bar: 20, plates: { 25: 4, 20: 2, 15: 1, 10: 2, 5: 1, 2.5: 1, 1.25: 1 } }
+  };
+  globalThis.ZK = {
+    generatePlan,
+    ZONE_PCT,
+    BAR_KG,
+    roundToPlates,
+    reachableLoads,
+    platesForLoad,
+    prescribeLoad,
+    composite,
+    modulate,
+    downShift,
+    substitute,
+    EXERCISES,
+    byId,
+    epley,
+    e1rmFromHistory,
+    eligibleForE1rm,
+    logAgainst,
+    rebaseline,
+    tonnageByMethod,
+    KITS,
+    buildWeek,
+    expand,
+    buildFullWeek,
+    selectAccessories,
+    selectMain,
+    MAIN_MOVEMENTS,
+    ACCESSORIES,
+    ZONE_SCHEME
+  };
+})();
+</script>
+<script>
+const $=s=>document.querySelector(s), el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e};
+const lifts=["squat","bench","deadlift"];
+const PCOL={45:"#2f5fae",35:"#c79a1e",25:"#2e8b50",20:"#2f5fae",15:"#c79a1e",10:"#3a3f4b",5:"#b03a2a",2.5:"#6b7280",1.25:"#8a9099"};
+const state={plan:null,maxes:{},unit:"lb",profile:{},cycle:{},log:[],swaps:{},pins:{},storeOK:true};
+const STORE="zk_v1", LBKG=2.2046226;
+function loadStore(){try{const r=localStorage.getItem(STORE);return r?JSON.parse(r):null;}catch(e){state.storeOK=false;return null;}}
+function saveAll(){try{localStorage.setItem(STORE,JSON.stringify({maxes:state.maxes,unit:state.unit,log:state.log,swaps:state.swaps,pins:state.pins,trainingDays:state.trainingDays,cycleStart:state.cycleStart,settings:{status:$("#status").value,planby:$("#planby").value,days:$("#days").value,weeks:$("#weeks").value,test:$("#test").value,compdate:$("#compdate").value,unit:$("#unit").value,speed:$("#speed").value,freq:$("#freq").value,squat:$("#squat").value,bench:$("#bench").value,deadlift:$("#deadlift").value}}));}catch(e){state.storeOK=false;}}
+const toUnit=(load,from,to)=> from===to?load:(from==="lb"&&to==="kg"?load/LBKG:load*LBKG);
+function logsIn(unit){return state.log.map(x=>({...x,load:toUnit(x.load,x.unit||"lb",unit)}));}
+function buildCsv(){
+  const cols=["date","lift","exercise","method","set_type","load","unit","reps","rpe","block","day","down_regulated","session_id"];
+  const esc=v=>{const t=String(v==null?"":v); return /[",\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t;};
+  const rows=state.log.slice().sort((a,b)=>a.ts-b.ts).map(s=>{
+    const d=new Date(s.ts), date=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+    return [date,s.lift,s.exName,s.method||"",s.setType||"",s.load,s.unit||"lb",s.reps,s.rpe,s.block,s.day,s.downRegulated?"yes":"no",s.sessionId].map(esc).join(",");
+  });
+  return cols.join(",")+"\n"+rows.join("\n")+(rows.length?"\n":"");
+}
+function exportCsv(){
+  if(!state.log.length){ alert("No sessions logged yet \u2014 nothing to export."); return; }
+  const blob=new Blob([buildCsv()],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob), a=document.createElement("a");
+  const t=new Date(), fn="zk-log-"+t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0")+".csv";
+  a.href=url; a.download=fn; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+const kit=()=>ZK.KITS[state.unit];
+const loadFor=(z,l)=>ZK.prescribeLoad(z,state.maxes[l],kit().plates,kit().bar).roundedLoad;
+const ZONE_ORDER=["VH","H","M","L","VL","P"]; // most → least intense
+const meZone=b=>{ const p=b.prescriptions.find(p=>p.method==="ME"); if(p) return p.zone;
+  const zs=b.prescriptions.map(x=>x.zone); return ZONE_ORDER.find(z=>zs.includes(z))||"M"; }; // no ME (e.g. beginner accumulation) → heaviest prescribed zone
+
+function read(){
+  state.unit=$("#unit").value;
+  const sv=$("#speed").value; state.speed=sv!=="off"; state.speedOrder=sv==="after"?"after":"before";
+  state.freqPriority=$("#freq").value;
+  state.equipment=["barbell","rack","dumbbell","cable","bench","bodyweight","machine"];
+  state.trainingDays=[...document.querySelectorAll("#wdpick button.on")].map(b=>+b.dataset.d).sort((a,b)=>a-b);
+  const ndays=state.trainingDays.length?Math.max(2,Math.min(6,state.trainingDays.length)):(+$("#days").value||3);
+  $("#days").value=ndays; if($("#days")) $("#days").disabled=state.trainingDays.length>0;
+  state.profile={status:$("#status").value,daysPerWeek:ndays,vhEligible:$("#status").value!=="beginner"};
+  state.compDate=$("#compdate").value||null;
+  state.planBy=$("#planby")?$("#planby").value:"weeks";
+  let weeks=+$("#weeks").value, testWeek=+$("#test").value; state.compWeeks=null;
+  if(!state.cycleStart) state.cycleStart=isoLocal(mondayThisWeek());
+  const dtc=daysToComp(), comp=compDateObj(), startM=cycleStartMon();
+  const dateDriven=state.planBy==="comp"&&comp&&startM&&comp>startM;
+  if(dateDriven){ const raw=Math.ceil((comp-startM)/(7*86400000)); weeks=Math.max(4,Math.min(20,raw)); testWeek=weeks; state.compWeeks={raw,used:weeks,days:dtc}; $("#weeks").value=weeks; $("#test").value=testWeek; }
+  if($("#weeks")) $("#weeks").disabled=dateDriven; if($("#test")) $("#test").disabled=dateDriven;
+  state.cycle={cycleLengthWeeks:weeks};
+  if(testWeek>0&&testWeek<=weeks) state.cycle.testWeek=testWeek;
+  for(const l of lifts) state.maxes[l]=+$("#"+l).value;
+}
+function generate(){ read(); state.plan=ZK.generatePlan(state.profile,state.cycle); renderPlan(); renderToday(); renderProgress(); renderSchedule(); saveAll(); }
+
+function plateBar(load){
+  const ps=ZK.platesForLoad(load,kit().plates,kit().bar);
+  const bar=el("div","bar"); bar.appendChild(el("div","collar"));
+  const max=Math.max(...Object.keys(kit().plates).map(Number));
+  ps.forEach(d=>{const p=el("div","plate");p.style.height=(40*Math.sqrt(d/max)+6)+"px";p.style.background=PCOL[d]||"#555";p.appendChild(el("span",null,d));bar.appendChild(p)});
+  bar.appendChild(el("div","sleeve"));
+  bar.appendChild(el("div","perside",ps.length?ps.join("+")+" /side":"bar only"));
+  return bar;
+}
+
+function renderPlan(){
+  const root=$("#plan"); root.innerHTML="";
+  const c=state.cycle, peak=c.testWeek!=null, cd=daysToComp();
+  const cyc=el("div","cyc"); cyc.innerHTML=`<span>cycle <b>${c.cycleLengthWeeks} wk</b></span><span>${state.profile.daysPerWeek} days/wk</span><span>${peak?`peak → <b>test wk ${c.testWeek}</b>`:"continuous"}</span>${cd!=null?`<span>🏆 comp <b>${cd>0?cd+"d":cd===0?"today":"past"}</b></span>`:""}<span>units <b>${state.unit}</b></span>`;
+  root.appendChild(cyc);
+  if(state.planBy==="comp"){ let msg, dc=daysToComp();
+    if(!state.compDate||dc==null||dc<=0) msg="<b>Competition-date planning is on, but no future date is set.</b> Add a competition date in Setup and the cycle length builds from it automatically.";
+    else { const cw=state.compWeeks;
+      msg="<b>Built around your competition date</b> ("+fmtCompDate(0)+", "+cw.days+" days out): "+([8,11,18].includes(cw.used)?"an":"a")+" <b>"+cw.used+"-week</b> cycle peaking on your meet \u2014 cycle weeks and test week are derived, so you do not set them."
+        +(cw.raw<4?" Your meet is sooner than a full cycle fits, so this is essentially a peak/taper block \u2014 lean on the Competition day for the final days.":cw.raw>20?" Your meet is 20+ weeks out, so this shows the final 20-week run-up.":""); }
+    root.appendChild(el("div","note compnote",msg)); }
+  let wk=1;
+  state.plan.blocks.forEach(b=>{
+    const taper=b.phase==="realizational";
+    const card=el("div","block"+(taper?" taper":""));
+    const head=el("div","bhead");
+    head.appendChild(el("div","idx","B"+b.index));
+    head.appendChild(el("div","phase",b.phase));
+    head.appendChild(el("div","wks",`wk ${wk}–${wk+b.lengthWk-1}`+(taper?" · taper→test":"")));
+    if(taper&&state.cycle.testWeek!=null) head.appendChild(el("div","testbadge",`🎯 TEST · wk ${state.cycle.testWeek}`));
+    card.appendChild(head); wk+=b.lengthWk;
+    const r=b.budget.ratio;
+    card.appendChild(el("div","ratio",`ME ${Math.round(r.ME*100)} · DE ${Math.round(r.DE*100)} · RE ${Math.round(r.RE*100)}  →  exposures ME${b.budget.exposures.ME} DE${b.budget.exposures.DE} RE${b.budget.exposures.RE}`));
+    const zones={}; b.prescriptions.forEach(p=>zones[p.method]=p.zone);
+    lifts.forEach(l=>{
+      const lift=el("div","lift");
+      const zlist=["ME","DE","RE"].filter(m=>zones[m]).map(m=>`${m} ${zones[m]}`).join(" · ");
+      lift.appendChild(el("div","lname",`<span>${l}</span><span class="zones">${zlist}</span>`));
+      const work=el("div","work");
+      const mz=meZone(b);
+      work.innerHTML=`<div class="big">${loadFor(mz,l)}<span class="u">${state.unit}</span></div><div class="meta"><span class="z">${mz}</span> · ${ZK.prescribeLoad(mz,1,{},0).pctOf1rm*100|0}% 1RM<br>top set</div>`;
+      work.appendChild(plateBar(loadFor(mz,l)));
+      lift.appendChild(work);
+      card.appendChild(lift);
+    });
+    root.appendChild(card);
+  });
+  const note=el("div","note"); note.innerHTML=`<b>Plan view shows competition-lift reference loads at your current maxes, held flat.</b> The <b>Today</b> tab has the actual session — including squat/bench/deadlift <b>variations</b> as the main lift in earlier blocks, converging on the competition lifts as you peak. Logging drives real block-to-block progression.`;
+  root.appendChild(note);
+}
+
+function renderToday(){
+  const root=$("#today"); root.innerHTML="";
+  if(!state.plan) return;
+  const ctl=el("div","today-ctl"); ctl.id="todayctl";
+  const blockOpts=state.plan.blocks.map(b=>`<option value="${b.index}">Block ${b.index} — ${b.phase}</option>`).join("");
+  const realz=state.plan.blocks.find(b=>b.phase==="realizational");
+  const testOpt=(state.cycle.testWeek!=null&&realz)?`<option value="test">🎯 Test day · wk ${state.cycle.testWeek}</option>`:"";
+  const compOpt=state.compDate?`<option value="comp">🏆 Competition day</option>`:"";
+  const dayOpts=Array.from({length:state.profile.daysPerWeek},(_,i)=>{const wd=weekdayDate(i); const dt=wd?(" \u00b7 "+wd.toLocaleDateString(undefined,{month:"short",day:"numeric"})):""; return '<option value="'+i+'">Day '+(i+1)+dt+'</option>';}).join("");
+  ctl.innerHTML=`<div class="dsel"><div class="field"><label>Block</label><select id="tblock">${blockOpts}${testOpt}${compOpt}</select></div><div class="field"><label>Training day</label><select id="tday">${dayOpts}</select></div></div>`;
+  const mk=(id,lab,val)=>`<div class="slider"><div class="srow"><span>${lab}</span><b id="${id}v">${val}</b></div><input type="range" id="${id}" min="1" max="5" value="${val}"></div>`;
+  ctl.innerHTML+=mk("sleep","Sleep",4)+mk("energy","Energy / drive",4)+mk("sore_squat","Sore · legs/back",1)+mk("sore_bench","Sore · chest/shoulders",1)+mk("sore_deadlift","Sore · posterior chain",1);
+  root.appendChild(ctl);
+  [...$("#tday").options].forEach((o,i)=>{ const wd=weekdayDate(i); if(wd) o.textContent="Day "+(i+1)+" \u00b7 "+wd.toLocaleDateString(undefined,{month:"short",day:"numeric"}); });
+  const out=el("div"); out.id="todayout"; root.appendChild(out);
+  const recompute=()=>{
+    ["sleep","energy","sore_squat","sore_bench","sore_deadlift"].forEach(id=>{const e=$("#"+id);if(e)$("#"+id+"v").textContent=e.value;});
+    const check={sleep:+$("#sleep").value,energy:+$("#energy").value,soreness:{squat:+$("#sore_squat").value,bench:+$("#sore_bench").value,deadlift:+$("#sore_deadlift").value}};
+    const {score,band}=ZK.composite(check,state.profile.status);
+    if($("#tblock").value==="test"){ renderTestDay($("#todayout"), realz?realz.index:0); return; }
+    if($("#tblock").value==="comp"){ renderCompDay($("#todayout")); return; }
+    const b=state.plan.blocks[+$("#tblock").value], di=+$("#tday").value;
+    // completion persists for a rolling week (so you can open it tomorrow and still see it),
+    // keyed on block+day+time — independent of the date-scoped save id.
+    const WEEK=7*86400000;
+    const lastDone=(bi,d)=>{const t=state.log.filter(s=>s.block===bi&&s.day===d).map(s=>s.ts||0); return t.length?Math.max(...t):null;};
+    const doneRecently=(bi,d)=>{const t=lastDone(bi,d); return t!=null && (Date.now()-t)<WEEK;};
+    const fmtWhen=(ts)=>{const a=new Date(ts), n=new Date(); const days=Math.round((new Date(n.toDateString())-new Date(a.toDateString()))/86400000); return days<=0?"today":days===1?"yesterday":days<7?a.toLocaleDateString(undefined,{weekday:"short"}):a.toLocaleDateString(undefined,{month:"short",day:"numeric"});};
+    {const ts=$("#tday"); for(let d=0;d<ts.options.length;d++){const wd=weekdayDate(d); const dt=wd?" \u00b7 "+wd.toLocaleDateString(undefined,{month:"short",day:"numeric"}):""; ts.options[d].text=`Day ${d+1}`+dt+(doneRecently(b.index,d)?"  \u2713":"");}}
+    const zones={}; b.prescriptions.forEach(p=>zones[p.method]=p.zone);
+    const mod=(zone,lift)=>{const m=ZK.modulate(zone,band,check.soreness[lift]);return {zone:m.zone,down:m.downRegulated};};
+    const GYM=["barbell","rack","dumbbell","cable","bench","bodyweight","machine"];
+    const day=(ZK.buildFullWeek(zones,b.budget.exposures,state.maxes,kit().plates,kit().bar,b.phase,b.index,GYM,state.speed,state.speedOrder,mod,band==="red",state.profile.daysPerWeek,state.freqPriority)[di])||[];
+    // apply on-the-fly exercise swaps (per block+day+slot), recomputing load for main swaps
+    day.forEach((it,idx)=>{
+      const ov=state.swaps[`${b.index}|${di}|${idx}`]; if(!ov) return;
+      if(ov.type==="main"&&it.group==="main"){const mv=ZK.MAIN_MOVEMENTS.find(m=>m.id===ov.id); if(mv){it.name=mv.name;it.cue=mv.cue;it.swapped=true;it.load=ZK.roundToPlates(ZK.ZONE_PCT[it.zone]*state.maxes[it.lift]*mv.loadFactor,kit().plates,kit().bar);}}
+      else if(ov.type==="acc"&&(it.group==="accessory"||it.group==="core")){const ac=ZK.ACCESSORIES.find(a=>a.id===ov.id); if(ac){it.name=ac.name;it.sets=ac.sets;it.reps=ac.reps;it.rest=ac.restSec+"s";it.cue=ac.cue;it.swapped=true;}}
+    });
+    // apply pinned loads (per block+day+slot): the pin wins; readiness becomes advice, not an override
+    day.forEach((it,idx)=>{ if(it.load==null) return;
+      const pn=state.pins[`${b.index}|${di}|${idx}`]; if(!pn) return;
+      it.advisedLoad=it.load;                                              // what the readiness-adjusted engine would load
+      it.load=Math.round(toUnit(pn.load,pn.unit||state.unit,state.unit));  // your pinned load, in the current unit
+      it.pinned=true; });
+    const o=$("#todayout"); o.innerHTML="";
+    const desc={green:"Train as planned. Readiness only protects — never adds load.",amber:"Heavy work backs off a zone. Still a productive day.",red:"Cut the intensity. A red day is information, not failure."}[band];
+    const sc=el("div","score "+band); sc.innerHTML=`<div class="num">${score}</div><div class="band">${band}</div><div class="desc">${desc}</div>`; o.appendChild(sc);
+    const ld=lastDone(b.index,di);
+    const _wd=weekdayDate(di), _ds=_wd?_wd.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"}):"";
+    o.appendChild(el("div","dayhdr",`Day ${di+1}${_ds?` · ${_ds}`:""} · ${day.length} exercises · ${b.phase}${ld!=null?` <span class="donebadge">✓ done ${fmtWhen(ld)}</span>`:""}`));
+    let lastGroup="";
+    day.forEach((e,idx)=>{
+      if(e.group!==lastGroup){lastGroup=e.group;const lab={speed:"Speed work",main:"Main lift",accessory:"Accessory work",core:"Core & midline"}[e.group];o.appendChild(el("div","tierlab",lab));}
+      const card=el("div","ex"+(e.downRegulated?" downreg":"")+(e.group!=="main"?" acc":""));
+      const badge=e.method?`<span class="exbadge ${e.method}">${e.method}</span>`:"";
+      card.appendChild(el("div","exhead",`<span class="exname">${e.name}</span>${badge}${e.swapped?' <span class="swaptag">swapped</span>':''}${e.pinned?' <span class="pintag">\ud83d\udccc pinned</span>':''}`));
+      const main=el("div","exmain");
+      let big=`<div class="exbig">${e.sets}<span class="x">×</span>${e.reps}`;
+      if(e.load!=null) big+=`<span class="exat">@ ${e.load}<span class="u">${state.unit}</span></span>`;
+      main.innerHTML=big+`</div>`;
+      if(e.load!=null) main.appendChild(plateBar(e.load));
+      card.appendChild(main);
+      let meta=e.zone?`zone ${e.zone} · ${e.rpe} · rest ${e.rest}`:`rest ${e.rest}`;
+      if(e.downRegulated) meta+=` · <span class="dr">readiness-reduced</span>`;
+      card.appendChild(el("div","exmeta",meta));
+      if(e.pinned&&e.advisedLoad!=null){const adv=Math.round(e.advisedLoad),pl=Math.round(e.load); if(adv!==pl){const heavier=pl>adv&&band!=="green"; card.appendChild(el("div","pinadvice"+(heavier?" warn":""),`\ud83d\udccc holding ${pl} ${state.unit} \u00b7 readiness-advised ~${adv} ${state.unit}`+(heavier?" \u2014 heavier than today's readiness suggests":"")));}}
+      if(e.cue) card.appendChild(el("div","excue",e.cue));
+      if(e.group==="main"||e.group==="accessory"||e.group==="core"){
+        const key=`${b.index}|${di}|${idx}`;
+        const bar=el("div","swapbar"); const btn=el("button","swapbtn"); btn.innerHTML="⇄ swap"; bar.appendChild(btn);
+        if(state.swaps[key]){const rst=el("button","swapbtn ghost"); rst.innerHTML="↺ reset"; rst.addEventListener("click",()=>{delete state.swaps[key]; saveAll(); recompute();}); bar.appendChild(rst);}
+        let pinPanel=null;
+        if(e.load!=null){
+          if(state.pins[key]){const up=el("button","swapbtn ghost"); up.innerHTML="\ud83d\udccc unpin"; up.addEventListener("click",()=>{delete state.pins[key]; saveAll(); recompute();}); bar.appendChild(up);}
+          else{ const pb=el("button","swapbtn"); pb.innerHTML="\ud83d\udccc pin load"; bar.appendChild(pb);
+            pinPanel=el("div","pinpanel hidden");
+            pb.addEventListener("click",()=>{
+              if(!pinPanel.classList.contains("hidden")){pinPanel.classList.add("hidden");pinPanel.innerHTML="";return;}
+              pinPanel.classList.remove("hidden");pinPanel.innerHTML="";
+              const lab=el("span","pinlab","Lock a load for this session:");
+              const inp=el("input","pininput"); inp.type="number"; inp.step="5"; inp.value=Math.round(e.load);
+              const setb=el("button","pinset"); setb.innerHTML="Pin";
+              setb.addEventListener("click",()=>{const v=+inp.value; if(v>0){state.pins[key]={load:v,unit:state.unit}; saveAll(); recompute();}});
+              pinPanel.appendChild(lab); pinPanel.appendChild(inp); pinPanel.appendChild(setb);
+            });
+          }
+        }
+        card.appendChild(bar);
+        if(pinPanel) card.appendChild(pinPanel);
+        const panel=el("div","swappanel hidden"); card.appendChild(panel);
+        btn.addEventListener("click",()=>{
+          if(!panel.classList.contains("hidden")){panel.classList.add("hidden"); panel.innerHTML=""; return;}
+          panel.classList.remove("hidden"); panel.innerHTML="";
+          const L=(e.group==="main")?e.lift:((day.find(x=>x.group==="main")||{}).lift);
+          let alts;
+          if(e.group==="main"){
+            alts=ZK.MAIN_MOVEMENTS.filter(m=>m.lift===L&&m.equipment.every(q=>GYM.includes(q))&&(e.method?m.methods.includes(e.method):true)&&m.name!==e.name).sort((a,c)=>c.specificity-a.specificity).map(m=>({id:m.id,type:"main",label:m.name,sub:Math.round(m.specificity*100)+"% specific"}));
+          }else{
+            const tier=e.group==="accessory"?"B":"C";
+            alts=ZK.ACCESSORIES.filter(a=>a.emphasis.includes(L)&&a.tier===tier&&a.equipment.every(q=>GYM.includes(q))&&a.name!==e.name).map(a=>({id:a.id,type:"acc",label:a.name,sub:a.sets+"×"+a.reps}));
+          }
+          if(!alts.length){panel.innerHTML='<div class="swapnone">No alternatives for this slot.</div>'; return;}
+          alts.forEach(a=>{const ab=el("button","swapopt"); ab.innerHTML=`<b>${a.label}</b><span>${a.sub}</span>`; ab.addEventListener("click",()=>{state.swaps[key]={type:a.type,id:a.id}; saveAll(); recompute();}); panel.appendChild(ab);});
+        });
+      }
+      o.appendChild(card);
+    });
+    if(day.some(e=>e.group==="speed")){const sn=el("div","note");sn.innerHTML=`<b>Speed work is explosive intent on a moderate load, not measured velocity</b> — there's no bar-speed tool here, so keep every rep genuinely fast and end the set when it slows. It's gated to base & strength blocks and drops at the peak.`;o.appendChild(sn);}
+    const n=el("div","note"); n.innerHTML=band==="green"?`Today <b>counts</b> toward your e1RM re-baseline.`:`These sets are <b>tagged down-regulated</b> — excluded from your e1RM, so a rough day can't masquerade as lost strength.`;
+    o.appendChild(n);
+    // Start workout → snapshot this reviewed session, then open the focused log view
+    const today=new Date().toISOString().slice(0,10);
+    const sid=`${today}|b${b.index}|d${di}`;
+    const already=state.log.some(s=>s.sessionId===sid);
+    if(!state.storeOK){const sb=el("div","storebar");sb.innerHTML="Saving is unavailable in this preview window. <b>Download the file and open it in your own browser</b> to save logs and progress between sessions.";o.appendChild(sb);}
+    const startBtn=el("button","startbtn"); startBtn.textContent=already?"✎ Open workout log":"▶ Start workout";
+    startBtn.addEventListener("click",()=>{ state.todaySnap={day,bIndex:b.index,di,sid}; renderLog(); });
+    o.appendChild(startBtn);
+  };
+  state.exitLog=()=>{ const sp=$("#setup"); if(sp) sp.style.display=""; const c=$("#todayctl"); if(c) c.style.display=""; recompute(); };
+  function renderLog(){
+    const snap=state.todaySnap; if(!snap) return;
+    const day=snap.day, di=snap.di, sid=snap.sid, b=state.plan.blocks[snap.bIndex];
+    const ctlEl=$("#todayctl"); if(ctlEl) ctlEl.style.display="none";
+    const sp=$("#setup"); if(sp) sp.style.display="none";   // hide the whole Setup panel for a clean log page
+    const back=()=>{ state.exitLog(); };
+    const o=$("#todayout"); o.innerHTML="";
+    const bk=el("button","backbtn"); bk.innerHTML="← Back to review"; bk.addEventListener("click",back); o.appendChild(bk);
+    const _wd=weekdayDate(di), _ds=_wd?_wd.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"}):"";
+    o.appendChild(el("div","loghdr","Logging · Day "+(di+1)+(_ds?" · "+_ds:"")+" · "+b.phase));
+    if(!state.storeOK){const sb=el("div","storebar");sb.innerHTML="Saving is unavailable in this preview window. <b>Download the file and open it in your own browser</b> to save between sessions.";o.appendChild(sb);}
+    const saved=state.log.filter(s=>s.sessionId===sid), isLogged=saved.length>0;
+    const lp=el("div","logpanel");
+    let html=`<div class="logh">Each set is pre-filled with the target — edit only what changed.${isLogged?' <span class="savedtag">✓ saved — editing</span>':''}</div>`;
+    day.forEach((it,xi)=>{
+      const itSaved=saved.filter(s=>s.exName===it.name);
+      const tgt=it.load!=null?`${it.sets}×${it.reps} @ ${it.load} ${state.unit}`:`${it.sets}×${it.reps}`;
+      html+=`<div class="logex"><div class="logexn">${it.name} <span class="logtgt">${tgt}</span></div>`;
+      for(let i=0;i<it.sets;i++){
+        const sv=itSaved[i];
+        const load=sv!=null?Math.round(toUnit(sv.load,sv.unit||state.unit,state.unit)):(it.load!=null?it.load:"");
+        const reps=sv!=null?sv.reps:it.reps, rpe=sv!=null?sv.rpe:8, ph=it.load!=null?it.load:"wt";
+        html+=`<div class="logrow" data-ex="${xi}"><span class="logn">Set ${i+1}</span>`+
+          `<input class="ll" type="number" step="any" value="${load}" placeholder="${ph}"><span class="lu">${state.unit}</span>`+
+          `<input class="lr" type="number" value="${reps}"><span>reps</span>`+
+          `<input class="lp" type="number" min="1" max="10" value="${rpe}"><span>RPE</span></div>`;
+      }
+      html+=`</div>`;
+    });
+    lp.innerHTML=html; o.appendChild(lp);
+    const fin=el("button","logbtn"); fin.textContent=isLogged?"Update & finish":"Finish workout";
+    fin.addEventListener("click",()=>{
+      const ts=Date.now();
+      state.log=state.log.filter(s=>s.sessionId!==sid);
+      lp.querySelectorAll(".logrow").forEach(r=>{
+        const it=day[+r.getAttribute("data-ex")];
+        const load=+r.querySelector(".ll").value, reps=+r.querySelector(".lr").value, rpe=+r.querySelector(".lp").value;
+        if(reps>0) state.log.push({lift:it.lift||it.name,exName:it.name,load:load||0,reps,rpe,setType:"working",method:it.method,downRegulated:!!it.downRegulated,unit:state.unit,ts,block:b.index,day:di,sessionId:sid});
+      });
+      saveAll(); renderSchedule(); back();
+    });
+    const backb=el("button","logbtn ghost"); backb.textContent="Back to review"; backb.addEventListener("click",back);
+    const row=el("div","logbtnrow"); row.appendChild(fin); row.appendChild(backb); o.appendChild(row);
+    if(state.log.length){
+      const lifts=["squat","bench","deadlift"];
+      const conv=logsIn(state.unit).filter(s=>s.method!=="DE");
+      const est=el("div","est"); let h=`<div class="ehd">Estimated 1RM from your logs · ${state.log.length} sets recorded</div>`; let any=false;
+      lifts.forEach(l=>{const e=ZK.e1rmFromHistory(conv,l); if(e!=null){any=true; h+=`<span class="e">${l}: <b>${Math.round(e)} ${state.unit}</b></span>`;}});
+      if(!any) h+=`<span class="e">No e1RM-eligible sets yet — needs a competition-lift working set at reps ≤ 8 and RPE ≥ 8.</span>`;
+      est.innerHTML=h; o.appendChild(est);
+      if(any){
+        const apply=el("button","logbtn ghost"); apply.textContent="Apply to working maxes";
+        apply.addEventListener("click",()=>{ state.maxes=ZK.rebaseline(state.maxes,conv,lifts); lifts.forEach(l=>{const e=$("#"+l); if(e) e.value=Math.round(state.maxes[l]);}); saveAll(); generate(); });
+        o.appendChild(apply);
+      }
+    }
+  }
+  ctl.addEventListener("input",recompute);
+  $("#tblock").addEventListener("change",recompute);
+  $("#tday").addEventListener("change",recompute);
+  recompute();
+}
+
+$("#gen").addEventListener("click",generate);
+$("#export-csv").addEventListener("click",exportCsv);
+$("#reset-logs").addEventListener("click",()=>{
+  if(!confirm("Reset logs?\n\nThis permanently deletes your saved sets, swaps, pinned loads, and completion checkmarks. Your settings and maxes are kept. There is no undo.")) return;
+  state.log=[]; state.swaps={}; state.pins={}; saveAll(); generate();
+});
+$("#reset-all").addEventListener("click",()=>{
+  if(!confirm("Full reset?\n\nThis permanently deletes EVERYTHING — logs, swaps, completion, settings, and maxes — back to defaults. There is no undo.")) return;
+  try{localStorage.removeItem(STORE);}catch(e){}
+  location.reload();
+});
+["status","days","weeks","test","planby","compdate","speed","freq","squat","bench","deadlift"].forEach(id=>{const e=$("#"+id);if(e)e.addEventListener("change",generate);});
+// units: convert the entered maxes (lb<->kg) BEFORE regenerating, so 255 lb is not read as 255 kg
+$("#unit").addEventListener("change",()=>{
+  const nu=$("#unit").value, ou=state.unit||"lb";
+  if(nu!==ou){
+    const conv=(v)=> ou==="lb"&&nu==="kg" ? Math.round(v/2.2046226/2.5)*2.5
+                  : ou==="kg"&&nu==="lb" ? Math.round(v*2.2046226/5)*5 : v;
+    ["squat","bench","deadlift"].forEach(id=>{const e=$("#"+id); e.value=conv(parseFloat(e.value)||0);});
+  }
+  generate();
+});
+// ---- analytics ----
+function e1rmSeries(lift,logs){
+  const byDate={};
+  logs.forEach(s=>{ if(s.lift!==lift||s.method==="DE"||!ZK.eligibleForE1rm(s)) return;
+    const d=new Date(s.ts).toISOString().slice(0,10), e=ZK.epley(s.load,s.reps);
+    if(!(d in byDate)||e>byDate[d]) byDate[d]=e; });
+  return Object.keys(byDate).sort().map(d=>({date:d,e1rm:byDate[d]}));
+}
+function progressLineChart(byLift){
+  const colors={squat:"#ff5a2c",bench:"#4aa8ff",deadlift:"#3ddc8c"};
+  const lifts=Object.keys(byLift).filter(l=>byLift[l].length);
+  if(!lifts.length) return "";
+  const dates=[...new Set(lifts.flatMap(l=>byLift[l].map(p=>p.date)))].sort();
+  const vals=lifts.flatMap(l=>byLift[l].map(p=>p.e1rm));
+  let mn=Math.min(...vals), mx=Math.max(...vals);
+  if(mn===mx){mn-=10;mx+=10;}else{const pad=(mx-mn)*0.15;mn-=pad;mx+=pad;}
+  const W=320,H=170,pl=40,pr=12,pt=12,pb=26,xw=W-pl-pr,yh=H-pt-pb;
+  const xi=d=>dates.length<=1?pl+xw/2:pl+(dates.indexOf(d)/(dates.length-1))*xw;
+  const yi=v=>pt+(1-(v-mn)/(mx-mn))*yh;
+  let svg=`<svg viewBox="0 0 ${W} ${H}" class="chart">`;
+  [mx,(mn+mx)/2,mn].forEach(v=>{const y=yi(v);svg+=`<line x1="${pl}" y1="${y}" x2="${W-pr}" y2="${y}" class="grid"/><text x="${pl-5}" y="${y+3}" class="yl">${Math.round(v)}</text>`;});
+  lifts.forEach(l=>{const p=byLift[l];
+    if(p.length>1) svg+=`<polyline points="${p.map(q=>xi(q.date)+","+yi(q.e1rm)).join(" ")}" fill="none" stroke="${colors[l]}" stroke-width="2"/>`;
+    p.forEach(q=>{svg+=`<circle cx="${xi(q.date)}" cy="${yi(q.e1rm)}" r="3" fill="${colors[l]}"/>`;});
+  });
+  svg+=`<text x="${pl}" y="${H-8}" class="xl">${dates[0].slice(5)}</text>`;
+  if(dates.length>1) svg+=`<text x="${W-pr}" y="${H-8}" class="xl" text-anchor="end">${dates[dates.length-1].slice(5)}</text>`;
+  return svg+`</svg><div class="legend">`+lifts.map(l=>`<span class="lg"><i style="background:${colors[l]}"></i>${l}</span>`).join("")+`</div>`;
+}
+function renderProgress(){
+  const root=$("#progress"); if(!root) return; root.innerHTML="";
+  const logs=logsIn(state.unit), unit=state.unit, lifts=["squat","bench","deadlift"];
+  if(!logs.length){ root.innerHTML='<div class="empty">No sessions logged yet.<br>Log your work on the <b>Today</b> tab — your strength trend, training volume, and session history will show up here.</div>'; return; }
+  const byS={}; logs.forEach(s=>{const k=s.sessionId||("t"+s.ts); (byS[k]=byS[k]||{ts:s.ts,sets:[]}); byS[k].sets.push(s); if(s.ts>byS[k].ts) byS[k].ts=s.ts;});
+  const sess=Object.values(byS).sort((a,b)=>b.ts-a.ts);
+  const weekN=sess.filter(s=>Date.now()-s.ts<7*86400000).length;
+  const series={}; lifts.forEach(l=>series[l]=e1rmSeries(l,logs));
+  const best={}; lifts.forEach(l=>best[l]=series[l].length?Math.max(...series[l].map(p=>p.e1rm)):null);
+  const ton={ME:0,DE:0,RE:0}; logs.forEach(s=>{ if(s.method&&ton[s.method]!=null) ton[s.method]+=s.load*s.reps; });
+  const tmax=Math.max(1,ton.ME,ton.DE,ton.RE);
+  let html='<div class="pstats">';
+  html+=`<div class="pstat"><div class="pv">${sess.length}</div><div class="pk">sessions</div></div>`;
+  html+=`<div class="pstat"><div class="pv">${weekN}</div><div class="pk">this week</div></div>`;
+  lifts.forEach(l=>{ if(best[l]!=null) html+=`<div class="pstat"><div class="pv">${Math.round(best[l])}<span class="pu">${unit}</span></div><div class="pk">${l} e1RM</div></div>`; });
+  html+='</div>';
+  // e1RM vs working max — re-test / rebase signal (ours: an Epley heuristic, not a measured 1RM)
+  {const BAND=0.025; const rows=lifts.map(l=>{const e=best[l],mx=state.maxes[l]; if(e==null||!mx)return null; const d=e-mx,pct=d/mx; return{l,mx,e,d,pct,st:pct>=BAND?"ahead":pct<=-BAND?"below":"on"};}).filter(Boolean);
+   if(rows.length){ html+='<div class="psec"><div class="ph">Re-test check \u00b7 e1RM vs working max</div>';
+     rows.forEach(r=>{const sg=r.d>=0?"+":""; const lab=r.st==="ahead"?"re-test / rebase":r.st==="on"?"on target":"unconfirmed";
+       html+=`<div class="rtrow ${r.st}"><span class="rtl">${r.l}</span><span class="rtnum">${Math.round(r.mx)}<span class="rtarrow">\u2192</span>${Math.round(r.e)}<span class="pu">${unit}</span></span><span class="rtd">${sg}${Math.round(r.d)} (${sg}${(r.pct*100).toFixed(1)}%)</span><span class="rtpill ${r.st}">${lab}</span></div>`;});
+     html+='<div class="pnote">How to read: <b>ahead</b> = your logged work projects above the max driving your loads \u2014 re-test, or hit <b>Apply to working maxes</b> in the Today logger. <b>on target</b> = within 2.5%, well-calibrated. <b>unconfirmed</b> = no eligible heavy set has reached your set max yet (not a regression). Estimates use Epley on eligible sets (\u2264 8 reps, RPE \u2265 8) \u2014 a heuristic, not a measured 1RM.</div>';
+     html+='</div>'; }}
+  html+='<div class="psec"><div class="ph">Estimated 1RM trend</div>';
+  html+= lifts.some(l=>series[l].length) ? progressLineChart(series) : '<div class="pnote">Log heavy sets (≤ 8 reps at RPE ≥ 8) on the competition lifts to chart your estimated 1RM over time.</div>';
+  html+='</div>';
+  html+='<div class="psec"><div class="ph">Training volume by method</div>';
+  if(ton.ME+ton.DE+ton.RE>0){ ["ME","DE","RE"].forEach(m=>{ html+=`<div class="tbar"><span class="tm">${m}</span><div class="ttrack"><div class="tfill ${m}" style="width:${Math.round(ton[m]/tmax*100)}%"></div></div><span class="tv">${Math.round(ton[m]).toLocaleString()}</span></div>`; }); html+=`<div class="pnote">Volume-load = Σ(load × reps) in ${unit}; main and speed work.</div>`; }
+  else html+='<div class="pnote">No method-tagged volume yet.</div>';
+  html+='</div>';
+  root.innerHTML=html;
+  renderSessions(root, sess, lifts, unit);   // interactive history: edit / delete past sessions
+}
+function renderSessions(root, sess, lifts, unit){
+  const sec=el("div","psec"); sec.appendChild(el("div","ph","Session history \u00b7 edit or delete"));
+  if(!sess.length){ sec.appendChild(el("div","pnote","No sessions logged yet.")); root.appendChild(sec); return; }
+  sess.forEach(s=>{
+    const sid=s.sets[0].sessionId;
+    const dt=new Date(s.ts).toLocaleDateString(undefined,{month:"short",day:"numeric"});
+    const tops=lifts.filter(l=>s.sets.some(x=>x.lift===l)).map(l=>{const ms=s.sets.filter(x=>x.lift===l); const bw=Math.max(...ms.map(x=>x.load)); return `${l} ${Math.round(bw)}`;}).join(" \u00b7 ");
+    const row=el("div","histrow");
+    const head=el("div","histhead");
+    head.innerHTML=`<span class="sd">${dt}</span><span class="sl">${tops||(s.sets.length+" sets")}</span>`;
+    const acts=el("div","histacts");
+    const editb=el("button","minibtn","Edit"); const delb=el("button","minibtn danger","Delete");
+    acts.appendChild(editb); acts.appendChild(delb); head.appendChild(acts); row.appendChild(head);
+    const panel=el("div","histpanel hidden"); row.appendChild(panel);
+    delb.addEventListener("click",()=>{
+      if(!confirm(`Delete the ${dt} session? This permanently removes ${s.sets.length} logged set(s). No undo.`)) return;
+      state.log=state.log.filter(x=>x.sessionId!==sid); saveAll(); generate();
+    });
+    editb.addEventListener("click",()=>{
+      if(!panel.classList.contains("hidden")){panel.classList.add("hidden"); panel.innerHTML=""; editb.textContent="Edit"; return;}
+      panel.classList.remove("hidden"); editb.textContent="Close";
+      let draft=state.log.filter(x=>x.sessionId===sid).map(x=>({...x}));
+      const fld=(lab,inp)=>{const w=el("div","efield"); w.appendChild(el("label",null,lab)); w.appendChild(inp); return w;};
+      const draw=()=>{
+        panel.innerHTML="";
+        if(!draft.length) panel.appendChild(el("div","pnote","All sets removed \u2014 saving will delete this session."));
+        draft.forEach((d,i)=>{
+          const er=el("div","editrow"); er.appendChild(el("span","ename",d.exName||d.lift));
+          const li=el("input","einp"); li.type="number"; li.step="5"; li.value=Math.round(d.load); li.addEventListener("input",()=>d.load=+li.value);
+          const ri=el("input","einp"); ri.type="number"; ri.value=d.reps; ri.addEventListener("input",()=>d.reps=+ri.value);
+          const pi=el("input","einp"); pi.type="number"; pi.step="0.5"; pi.value=d.rpe; pi.addEventListener("input",()=>d.rpe=+pi.value);
+          const xb=el("button","minibtn danger","\u2715"); xb.addEventListener("click",()=>{draft.splice(i,1); draw();});
+          er.appendChild(fld("load",li)); er.appendChild(fld("reps",ri)); er.appendChild(fld("rpe",pi)); er.appendChild(xb);
+          panel.appendChild(er);
+        });
+        const saveb=el("button","minibtn","Save changes");
+        saveb.addEventListener("click",()=>{
+          state.log=state.log.filter(x=>x.sessionId!==sid).concat(draft.map(d=>({...d,load:+d.load||0,reps:+d.reps||0,rpe:+d.rpe||0})));
+          saveAll(); generate();
+        });
+        panel.appendChild(saveb);
+      };
+      draw();
+    });
+    sec.appendChild(row);
+  });
+  root.appendChild(sec);
+}
+function compDateObj(){ if(!state.compDate) return null; const p=state.compDate.split("-").map(Number); if(p.length!==3||p.some(isNaN)) return null; return new Date(p[0],p[1]-1,p[2]); }
+function daysToComp(){ const c=compDateObj(); if(!c) return null; const n=new Date(); n.setHours(0,0,0,0); return Math.round((c-n)/86400000); }
+function fmtCompDate(off){ const c=compDateObj(); if(!c) return ""; const d=new Date(c); d.setDate(d.getDate()-off); return d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"}); }
+function renderCompDay(o){
+  o.innerHTML="";
+  const U=state.unit, LAB={squat:"Squat",bench:"Bench",deadlift:"Deadlift"}, sid=new Date().toISOString().slice(0,10)+"|comp";
+  const d=daysToComp(), when=d==null?"":(d>0?"in "+d+" day"+(d===1?"":"s"):d===0?"today":(-d)+" day"+(d===-1?"":"s")+" ago");
+  const sc=el("div","score comp"); sc.innerHTML='<div class="num">🏆</div><div class="band">comp</div><div class="desc">Competition '+when+(state.compDate?" ("+fmtCompDate(0)+")":"")+'. Sharpen by cutting volume into the date, then rehearse openers and attempts. This is separate from the internal test week.</div>'; o.appendChild(sc);
+  o.appendChild(el("div","dayhdr","Competition prep · taper & attempts"));
+  if(state.compDate){
+    const tl=el("div","taperline"); tl.appendChild(el("div","loghdr","Taper into the date — a guide (ours)"));
+    [[10,"Last heavier session — reduced volume (~3×2 @ 85%). Bank fitness, start shedding fatigue."],
+     [6,"Openers only — a couple of crisp singles at ~90%. Low volume, full rest between."],
+     [3,"Light & technical, or rest. Nothing taxing."],
+     [1,"Rest. Eat, sleep, stay loose."],
+     [0,"Compete — opener, second, third (below)."]].forEach(st=>{const row=el("div","taperrow"); row.innerHTML='<span class="tdate">'+fmtCompDate(st[0])+'</span><span class="tdo">'+st[1]+'</span>'; tl.appendChild(row);});
+    o.appendChild(tl);
+  } else o.appendChild(el("div","pnote","Set a competition date in Setup to see the day-counted taper."));
+  const ATT=[["Opener",0.91],["Second",0.97],["Third",1.03]];
+  ["squat","bench","deadlift"].forEach(l=>{
+    const card=el("div","ex"); card.appendChild(el("div","exhead",'<span class="exname">'+LAB[l]+' — attempts</span><span class="exbadge ME">comp</span>'));
+    const ramp=el("div","ramp");
+    ATT.forEach(a=>{const load=ZK.roundToPlates(a[1]*state.maxes[l],kit().plates,kit().bar); const row=el("div","ramprow"+(a[0]==="Third"?" top":"")); row.innerHTML='<span class="rr">'+a[0]+': '+load+'<span class="u">'+U+'</span></span><span class="rp">'+Math.round(a[1]*100)+'%</span>'; ramp.appendChild(row);});
+    card.appendChild(ramp); card.appendChild(el("div","excue","Pick an opener you could hit for a double on your worst day. Attempt percentages are a convention (ours), off your current max.")); o.appendChild(card);
+  });
+  const lp=el("div","logpanel"); lp.appendChild(el("div","loghdr","Log your best successful single"));
+  const ins={};
+  ["squat","bench","deadlift"].forEach(l=>{const row=el("div","logrow"); row.appendChild(el("span","ename",LAB[l]));
+    const li=el("input","einp"); li.type="number"; li.step="5"; const ex=state.log.find(x=>x.sessionId===sid&&x.lift===l);
+    li.value=ex?Math.round(ex.load):Math.round(1.03*state.maxes[l]); ins[l]=li;
+    const w=el("div","efield"); w.appendChild(el("label",null,"best single ("+U+")")); w.appendChild(li); row.appendChild(w); lp.appendChild(row);});
+  const save=el("button","logbtn",state.log.some(x=>x.sessionId===sid)?"Update meet":"Save meet");
+  save.addEventListener("click",()=>{const ts=Date.now(); state.log=state.log.filter(x=>x.sessionId!==sid);
+    ["squat","bench","deadlift"].forEach(l=>{const v=+ins[l].value; if(v>0) state.log.push({lift:l,exName:LAB[l]+" (meet)",load:v,reps:1,rpe:10,setType:"working",method:"ME",downRegulated:false,unit:U,ts,block:0,day:0,sessionId:sid});});
+    saveAll(); renderCompDay(o);});
+  lp.appendChild(save);
+  const apply=el("button","logbtn ghost","Apply to working maxes");
+  apply.addEventListener("click",()=>{const conv=logsIn(state.unit).filter(s=>s.sessionId===sid); if(!conv.length){alert("Log your meet singles first."); return;}
+    ["squat","bench","deadlift"].forEach(l=>{const t=conv.find(s=>s.lift===l); if(t){state.maxes[l]=Math.round(t.load); const e=$("#"+l); if(e) e.value=state.maxes[l];}});
+    saveAll(); generate();});
+  lp.appendChild(apply);
+  o.appendChild(lp);
+}
+function renderTestDay(o, realzIdx){
+  o.innerHTML="";
+  const wk=state.cycle.testWeek, U=state.unit, sid=new Date().toISOString().slice(0,10)+"|test";
+  const LAB={squat:"Squat",bench:"Bench",deadlift:"Deadlift"};
+  const sc=el("div","score test"); sc.innerHTML='<div class="num">🎯</div><div class="band">test</div><div class="desc">Realization week '+wk+'. Work up to one heavy, clean single per lift. Test rested — the readiness sliders are ignored here.</div>'; o.appendChild(sc);
+  o.appendChild(el("div","dayhdr","Test day · week "+wk+" · peak"));
+  const RAMP=[[0.40,5],[0.55,3],[0.70,2],[0.82,1],[0.90,1]];
+  ["squat","bench","deadlift"].forEach(l=>{
+    const card=el("div","ex");
+    card.appendChild(el("div","exhead",'<span class="exname">'+LAB[l]+' — work up to a top single</span><span class="exbadge ME">test</span>'));
+    const ramp=el("div","ramp");
+    RAMP.forEach(pr=>{const load=ZK.roundToPlates(pr[0]*state.maxes[l],kit().plates,kit().bar); const row=el("div","ramprow"); row.innerHTML='<span class="rr">'+pr[1]+' × '+load+'<span class="u">'+U+'</span></span><span class="rp">'+Math.round(pr[0]*100)+'%</span>'; ramp.appendChild(row);});
+    const tgt=Math.round(state.maxes[l]); const top=el("div","ramprow top"); top.innerHTML='<span class="rr">1 × work up to ≥ '+tgt+'<span class="u">'+U+'</span></span><span class="rp">attempt</span>'; ramp.appendChild(top);
+    card.appendChild(ramp);
+    card.appendChild(el("div","excue","Make small jumps near the top; stop at a hard but clean single. The warm-up ramp is a coaching guide (ours), not a Z&K prescription."));
+    o.appendChild(card);
+  });
+  const lp=el("div","logpanel"); lp.appendChild(el("div","loghdr","Log your top singles"));
+  const ins={};
+  ["squat","bench","deadlift"].forEach(l=>{const row=el("div","logrow"); row.appendChild(el("span","ename",LAB[l]));
+    const li=el("input","einp"); li.type="number"; li.step="5"; const ex=state.log.find(x=>x.sessionId===sid&&x.lift===l);
+    li.value=ex?Math.round(ex.load):Math.round(state.maxes[l]); ins[l]=li;
+    const w=el("div","efield"); w.appendChild(el("label",null,"top single ("+U+")")); w.appendChild(li); row.appendChild(w); lp.appendChild(row);});
+  const logged=state.log.some(x=>x.sessionId===sid);
+  const save=el("button","logbtn",logged?"Update test":"Save test");
+  save.addEventListener("click",()=>{const ts=Date.now(); state.log=state.log.filter(x=>x.sessionId!==sid);
+    ["squat","bench","deadlift"].forEach(l=>{const v=+ins[l].value; if(v>0) state.log.push({lift:l,exName:LAB[l]+" (test single)",load:v,reps:1,rpe:10,setType:"working",method:"ME",downRegulated:false,unit:U,ts,block:realzIdx,day:0,sessionId:sid});});
+    saveAll(); renderTestDay(o, realzIdx);});
+  lp.appendChild(save);
+  const apply=el("button","logbtn ghost","Apply to working maxes");
+  apply.addEventListener("click",()=>{const conv=logsIn(state.unit).filter(s=>s.sessionId===sid); if(!conv.length){alert("Log your test singles first."); return;}
+    ["squat","bench","deadlift"].forEach(l=>{const t=conv.find(s=>s.lift===l); if(t){state.maxes[l]=Math.round(t.load); const e=$("#"+l); if(e) e.value=state.maxes[l];}});
+    saveAll(); generate();});
+  lp.appendChild(apply);
+  lp.appendChild(el("div","pnote","A test is a measurement, so Apply sets each max to the single you logged — up or down — unlike the e1RM estimate, which only ratchets up."));
+  o.appendChild(lp);
+}
+function mondayThisWeek(){ const n=new Date(); n.setHours(0,0,0,0); const g=(n.getDay()+6)%7; const m=new Date(n); m.setDate(n.getDate()-g); return m; }
+function isoLocal(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function parseISO(s){ if(!s) return null; const p=s.split("-").map(Number); if(p.length!==3||p.some(isNaN)) return null; return new Date(p[0],p[1]-1,p[2]); }
+function cycleStartMon(){ return parseISO(state.cycleStart) || mondayThisWeek(); }
+function weekdayDate(di){ if(!state.trainingDays||state.trainingDays[di]==null) return null; return addDaysD(mondayThisWeek(), state.trainingDays[di]); }
+function addDaysD(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+function fmtSchedDate(d){ return d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"}); }
+function blockDayMains(b){
+  const GYM=["barbell","rack","dumbbell","cable","bench","bodyweight","machine"];
+  const zs={}; b.prescriptions.forEach(p=>zs[p.method]=p.zone);
+  const wk=ZK.buildFullWeek(zs,b.budget.exposures,state.maxes,kit().plates,kit().bar,b.phase,b.index,GYM,state.speed,state.speedOrder,undefined,false,state.profile.daysPerWeek,state.freqPriority);
+  return wk.map(day=>{const m=(day||[]).find(x=>x.group==="main"); return m?m.lift:null;});
+}
+function renderSchedule(){
+  const root=$("#schedule"); if(!root) return; root.innerHTML="";
+  const WD=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const td=(state.trainingDays&&state.trainingDays.length)?state.trainingDays.slice():null;
+  if(!td){ root.appendChild(el("div","empty","Pick your training days in Setup to see a dated, week-by-week schedule.")); return; }
+  const useDays=td.slice(0,state.profile.daysPerWeek);
+  const dc=daysToComp();
+  const hd=el("div","schhd"); hd.innerHTML="<b>Schedule</b> \u2014 sessions on "+useDays.map(d=>WD[d]).join(" / ")+(state.compDate&&dc!=null?" \u00b7 competition "+fmtCompDate(0)+" ("+(dc>0?dc+" days out":dc===0?"today":"past")+")":""); root.appendChild(hd);
+  root.appendChild(el("div","pnote","Dates are the plan as written. Miss a session or shift a day and the real dates drift \u2014 treat this as a guide, not a fixed calendar."));
+  const startRow=el("div","schstart"); startRow.innerHTML="cycle start: <b>"+cycleStartMon().toLocaleDateString(undefined,{month:"short",day:"numeric"})+"</b>";
+  const reb=el("button","minibtn"); reb.textContent="re-anchor to this week"; reb.addEventListener("click",()=>{ state.cycleStart=isoLocal(mondayThisWeek()); saveAll(); generate(); }); startRow.appendChild(reb); root.appendChild(startRow);
+  const loggedDates=new Set(state.log.map(x=>isoLocal(new Date(x.ts)))), todayIso=isoLocal(new Date());
+  const mon0=cycleStartMon(); let wk=1;
+  state.plan.blocks.forEach(b=>{
+    const mains=blockDayMains(b);
+    for(let i=0;i<b.lengthWk;i++,wk++){
+      const wsec=el("div","wsec");
+      wsec.appendChild(el("div","whd","Week "+wk+" \u00b7 "+b.phase+(b.phase==="realizational"?" \u00b7 peak/taper":"")));
+      useDays.forEach((d,di)=>{
+        const date=addDaysD(mon0,(wk-1)*7+d), dIso=isoLocal(date);
+        const focus=mains[di]?(" \u00b7 "+mains[di]):"", done=loggedDates.has(dIso), isToday=dIso===todayIso;
+        const row=el("div","schrow"+(done?" done":"")+(isToday?" today":"")); row.innerHTML='<span class="sdate">'+fmtSchedDate(date)+'</span><span class="sday">Day '+(di+1)+focus+'</span>'+(done?'<span class="schk">\u2713</span>':isToday?'<span class="schtoday">today</span>':'');
+        wsec.appendChild(row);
+      });
+      root.appendChild(wsec);
+    }
+  });
+  if(state.compDate){ const c=compDateObj(); if(c){ const m=el("div","schcomp"); m.innerHTML="\ud83c\udfc6 <b>Competition</b> \u00b7 "+c.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}); root.appendChild(m); } }
+}
+function showTab(t){
+  if(state.exitLog) state.exitLog();
+  [["plan","#t-plan","#plan"],["today","#t-today","#today"],["progress","#t-progress","#progress"],["sched","#t-sched","#schedule"]].forEach(([n,btn,pane])=>{
+    $(btn).classList.toggle("on",n===t); $(pane).classList.toggle("hidden",n!==t);
+  });
+  if(t==="progress") renderProgress();
+  if(t==="sched") renderSchedule();
+}
+$("#t-plan").addEventListener("click",()=>showTab("plan"));
+$("#t-today").addEventListener("click",()=>showTab("today"));
+$("#t-progress").addEventListener("click",()=>showTab("progress"));
+$("#t-sched").addEventListener("click",()=>showTab("sched"));
+document.querySelectorAll("#wdpick button").forEach(b=>b.addEventListener("click",()=>{ b.classList.toggle("on"); generate(); }));
+(function init(){
+  try{localStorage.setItem("zk_probe","1");localStorage.removeItem("zk_probe");}catch(e){state.storeOK=false;}
+  const sv=state.storeOK?loadStore():null;
+  if(sv){
+    if(sv.settings){for(const k in sv.settings){const e=$("#"+k); if(e&&sv.settings[k]!=null&&sv.settings[k]!=="") e.value=sv.settings[k];}}
+    if(Array.isArray(sv.log)) state.log=sv.log;
+    if(sv.swaps) state.swaps=sv.swaps;
+    if(sv.pins) state.pins=sv.pins;
+  if(sv.cycleStart) state.cycleStart=sv.cycleStart;
+  if(Array.isArray(sv.trainingDays)){ state.trainingDays=sv.trainingDays; document.querySelectorAll("#wdpick button").forEach(b=>b.classList.toggle("on", sv.trainingDays.includes(+b.dataset.d))); }
+  }
+  generate();
+})();
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
+</body>
+</html>
