@@ -80,7 +80,7 @@ header{padding:26px 0 18px;border-bottom:1px solid var(--line);margin-bottom:22p
 .plate span{font-family:var(--mono);font-size:7px;color:rgba(255,255,255,.85);transform:rotate(-90deg);white-space:nowrap}
 .perside{font-family:var(--mono);font-size:10px;color:var(--faint);margin-left:8px;align-self:center}
 
-.dsel{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.dsel{flex-wrap:wrap;display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
 .dayhdr{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:4px 0 12px}
 .ex{border:1px solid var(--line);border-radius:9px;margin-bottom:12px;overflow:hidden}
 .ex.downreg{border-color:var(--amber)}
@@ -180,6 +180,20 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-ra
 .score.comp{border-color:#3ddc8c}
 .score.comp .num,.score.comp .band{color:#3ddc8c}
 .compnote{border-left:3px solid var(--accent);padding-left:11px}
+.fatpanel{border:1px solid var(--line);border-radius:10px;padding:13px 14px;margin:0 0 16px}
+.fatpanel.hot{border-color:var(--accent);background:rgba(255,90,44,.06)}
+.fathd{font-size:13px;font-weight:700;color:var(--text);margin-bottom:9px}
+.fatpanel.hot .fathd{color:var(--accent)}
+.fatmark{display:grid;grid-template-columns:92px 64px 1fr;gap:8px;align-items:baseline;padding:4px 0;font-size:12px}
+.fatmark .fmk{color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;font-size:10px}
+.fatmark .fms{font-family:var(--mono);font-size:11px}
+.fatmark.ok .fms{color:#5fb87a}.fatmark.elevated .fms{color:var(--accent);font-weight:700}.fatmark.insufficient .fms{color:var(--faint)}
+.fatmark .fmd{color:var(--muted)}
+.fatbtn{margin-top:11px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;background:var(--accent);color:#15171c;border:none;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700}
+.fatbtn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.fatbanner{border:1px solid var(--accent);background:rgba(255,90,44,.07);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--text)}
+.fatbanner.deloading{border-color:var(--line);background:var(--surface2)}
+.fatbanner .fatbtn{margin-top:10px;display:inline-block}
 .wdrow{margin-top:16px}
 .wdlbl{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
 .wdpick{display:flex;gap:6px;flex-wrap:wrap}
@@ -377,8 +391,10 @@ var _ZK = (() => {
     // score 0–100; between = amber
     localSorenessVeto: 4,
     // per-region soreness ≥ this → down-shift that lift only
-    escalationThreshold: { default: 3, realizational: 2 }
+    escalationThreshold: { default: 3, realizational: 2 },
     // red days in last 5 → escalate
+    fatigueWatch: { rpeDrift: 1, e1rmDrop: 0.98, minBands: 3, minRpeSets: 3, rpeMaxReps: 6 }
+    // (ours) reactive-deload thresholds
   };
   var ZONE_SCHEME = {
     VL: { sets: 3, reps: 20, restMin: 1, restMax: 1.5 },
@@ -581,6 +597,7 @@ var _ZK = (() => {
   }
 
   // src/readiness.ts
+  var clamp2 = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
   function composite(c, status) {
     const w = READINESS.weights;
     const sorenessVals = Object.values(c.soreness);
@@ -594,6 +611,16 @@ var _ZK = (() => {
     const score = Math.round(norm * 100);
     const band = score >= READINESS.bands.greenMin ? "green" : score <= READINESS.bands.redMax ? "red" : "amber";
     return { score, band };
+  }
+  function repMaxAtLoad(load, e1rm) {
+    return Math.max(0, 30 * (e1rm / load - 1));
+  }
+  function expectedRPE(load, reps, e1rm) {
+    const rir = repMaxAtLoad(load, e1rm) - reps;
+    return clamp2(10 - Math.max(0, rir), 1, 10);
+  }
+  function rpeDrift(load, reps, actualRPE, e1rm) {
+    return actualRPE - expectedRPE(load, reps, e1rm);
   }
   var LADDER = ["VL", "L", "M", "H", "VH"];
   function downShift(zone, steps) {
@@ -610,6 +637,38 @@ var _ZK = (() => {
     if (band === "amber") return { zone: downShift(plannedZone, 1), action: "zone_down", downRegulated: true };
     if (isLight) return { zone: plannedZone, action: "trim_volume", downRegulated: true };
     return { zone: downShift(plannedZone, 1), action: "zone_down", downRegulated: true };
+  }
+  function escalation(recentBands, phase) {
+    const window = recentBands.slice(-5);
+    const reds = window.filter((b) => b === "red").length;
+    const threshold = phase === "realizational" ? READINESS.escalationThreshold.realizational : READINESS.escalationThreshold.default;
+    return reds >= threshold ? { state: "escalated", action: "deload_and_hold" } : { state: "normal", action: "none" };
+  }
+  function fatigueWatch(args) {
+    const cfg = READINESS.fatigueWatch;
+    let readiness;
+    if (args.recentBands.length < cfg.minBands) readiness = { status: "insufficient", detail: `need ${cfg.minBands}+ logged sessions` };
+    else {
+      const reds = args.recentBands.slice(-5).filter((b) => b === "red").length;
+      readiness = escalation(args.recentBands, args.phase).action === "deload_and_hold" ? { status: "elevated", detail: `${reds} red-readiness day${reds === 1 ? "" : "s"} in the last 5` } : { status: "ok", detail: `${reds} red day${reds === 1 ? "" : "s"} in the last 5` };
+    }
+    let rpe;
+    const valid = args.mainSets.filter((s) => s.reps > 0 && s.reps <= cfg.rpeMaxReps && args.refE1rm[s.lift] > 0 && s.load > 0);
+    if (valid.length < cfg.minRpeSets) rpe = { status: "insufficient", detail: `need ${cfg.minRpeSets}+ recent heavy main sets (\u2264${cfg.rpeMaxReps} reps)` };
+    else {
+      const avg = valid.reduce((a, s) => a + rpeDrift(s.load, s.reps, s.rpe, args.refE1rm[s.lift]), 0) / valid.length;
+      rpe = avg >= cfg.rpeDrift ? { status: "elevated", detail: `main-lift RPE running +${avg.toFixed(1)} over expected` } : { status: "ok", detail: `main-lift RPE ${avg >= 0 ? "+" : ""}${avg.toFixed(1)} vs expected` };
+    }
+    let e1rm;
+    const lifts = Object.keys(args.recentE1rm).filter((l) => args.recentE1rm[l] != null && args.priorE1rm[l] != null);
+    if (!lifts.length) e1rm = { status: "insufficient", detail: "need e1RM-eligible sets in two windows" };
+    else {
+      const dropped = lifts.filter((l) => args.recentE1rm[l] < args.priorE1rm[l] * cfg.e1rmDrop);
+      e1rm = dropped.length ? { status: "elevated", detail: `e1RM down for ${dropped.join(", ")} vs ~2 weeks ago` } : { status: "ok", detail: "e1RM holding or rising" };
+    }
+    const markers = [readiness, rpe, e1rm];
+    const elevated = markers.filter((m) => m.status === "elevated").length;
+    return { readiness, rpe, e1rm, elevated, recommendDeload: elevated >= 2, reasons: markers.filter((m) => m.status === "elevated").map((m) => m.detail) };
   }
 
   // src/substitution.ts
@@ -990,7 +1049,20 @@ var _ZK = (() => {
     }
     return out;
   }
-  function buildFullWeek(zones, exposures, e1rms, inv, bar, phase, blockIndex, available, speedWork = false, speedOrder = "before", mod, trimAccessories = false, daysPerWeek = 3, freqPriority = "bench") {
+  function weekProgression(phase, weekInBlock) {
+    if (weekInBlock <= 0) return { setDelta: 0, pctBump: 0 };
+    switch (phase) {
+      case "accumulative":
+        return { setDelta: Math.min(weekInBlock, 2), pctBump: 0 };
+      case "transmutative":
+        return { setDelta: 0, pctBump: Math.min(weekInBlock * 0.025, 0.05) };
+      case "realizational":
+        return { setDelta: -weekInBlock, pctBump: 0 };
+      default:
+        return { setDelta: 0, pctBump: 0 };
+    }
+  }
+  function buildFullWeek(zones, exposures, e1rms, inv, bar, phase, blockIndex, available, speedWork = false, speedOrder = "before", mod, trimAccessories = false, daysPerWeek = 3, freqPriority = "bench", weekInBlock = 0, deload = false) {
     const emphasis = mainMethod(phase, zones, exposures);
     const secondary = emphasis === "ME" ? "RE" : "ME";
     const baseLifts = ["squat", "bench", "deadlift"];
@@ -1008,10 +1080,12 @@ var _ZK = (() => {
         zone = r.zone;
         down = r.down;
       }
+      const wp = down ? { setDelta: 0, pctBump: 0 } : weekProgression(phase, weekInBlock);
+      const dl = deload && !down;
       const mv = selectMain(lift, method, phase, blockIndex, available);
       const sch = ZONE_SCHEME[zone];
       const items = [];
-      const speedItem = speedWork && SPEED_PHASES.includes(phase) && !trimAccessories ? {
+      const speedItem = speedWork && SPEED_PHASES.includes(phase) && !trimAccessories && !deload ? {
         group: "speed",
         lift,
         name: `Speed ${(EX[lift] ?? lift).toLowerCase()}`,
@@ -1029,9 +1103,9 @@ var _ZK = (() => {
         group: "main",
         lift,
         name: mv.name,
-        sets: sch.sets,
+        sets: dl ? Math.max(2, sch.sets - 2) : Math.max(2, sch.sets + wp.setDelta),
         reps: String(sch.reps),
-        load: roundToPlates(ZONE_PCT[zone] * e1rms[lift] * mv.loadFactor, inv, bar),
+        load: roundToPlates((dl ? ZONE_PCT[zone] * 0.9 : Math.min(ZONE_PCT[zone] + wp.pctBump, 0.95)) * e1rms[lift] * mv.loadFactor, inv, bar),
         rest: `${sch.restMin}\u2013${sch.restMax} min`,
         rpe: RPE[zone],
         method,
@@ -1041,7 +1115,7 @@ var _ZK = (() => {
       });
       if (speedItem && speedOrder === "after") items.push(speedItem);
       const used = [mv.name, ...speedItem ? [speedItem.name] : []];
-      for (const a of selectAccessories(lift, phase, available, trimAccessories, used, blockIndex)) {
+      for (const a of selectAccessories(lift, phase, available, trimAccessories || deload, used, blockIndex)) {
         items.push({ group: a.tier === "B" ? "accessory" : "core", name: a.name, sets: a.sets, reps: a.reps, rest: `${a.restSec}s`, cue: a.cue });
       }
       return items;
@@ -1064,6 +1138,10 @@ var _ZK = (() => {
     composite,
     modulate,
     downShift,
+    escalation,
+    expectedRPE,
+    rpeDrift,
+    fatigueWatch,
     substitute,
     EXERCISES,
     byId,
@@ -1089,10 +1167,10 @@ var _ZK = (() => {
 const $=s=>document.querySelector(s), el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e};
 const lifts=["squat","bench","deadlift"];
 const PCOL={45:"#2f5fae",35:"#c79a1e",25:"#2e8b50",20:"#2f5fae",15:"#c79a1e",10:"#3a3f4b",5:"#b03a2a",2.5:"#6b7280",1.25:"#8a9099"};
-const state={plan:null,maxes:{},unit:"lb",profile:{},cycle:{},log:[],swaps:{},pins:{},storeOK:true};
+const state={plan:null,maxes:{},unit:"lb",profile:{},cycle:{},log:[],swaps:{},pins:{},bands:[],deloadWeek:null,storeOK:true};
 const STORE="zk_v1", LBKG=2.2046226;
 function loadStore(){try{const r=localStorage.getItem(STORE);return r?JSON.parse(r):null;}catch(e){state.storeOK=false;return null;}}
-function saveAll(){try{localStorage.setItem(STORE,JSON.stringify({maxes:state.maxes,unit:state.unit,log:state.log,swaps:state.swaps,pins:state.pins,trainingDays:state.trainingDays,cycleStart:state.cycleStart,settings:{status:$("#status").value,planby:$("#planby").value,days:$("#days").value,weeks:$("#weeks").value,test:$("#test").value,compdate:$("#compdate").value,unit:$("#unit").value,speed:$("#speed").value,freq:$("#freq").value,squat:$("#squat").value,bench:$("#bench").value,deadlift:$("#deadlift").value}}));}catch(e){state.storeOK=false;}}
+function saveAll(){try{localStorage.setItem(STORE,JSON.stringify({maxes:state.maxes,unit:state.unit,log:state.log,swaps:state.swaps,pins:state.pins,bands:state.bands,deloadWeek:state.deloadWeek,trainingDays:state.trainingDays,cycleStart:state.cycleStart,settings:{status:$("#status").value,planby:$("#planby").value,days:$("#days").value,weeks:$("#weeks").value,test:$("#test").value,compdate:$("#compdate").value,unit:$("#unit").value,speed:$("#speed").value,freq:$("#freq").value,squat:$("#squat").value,bench:$("#bench").value,deadlift:$("#deadlift").value}}));}catch(e){state.storeOK=false;}}
 const toUnit=(load,from,to)=> from===to?load:(from==="lb"&&to==="kg"?load/LBKG:load*LBKG);
 function logsIn(unit){return state.log.map(x=>({...x,load:toUnit(x.load,x.unit||"lb",unit)}));}
 function buildCsv(){
@@ -1188,7 +1266,7 @@ function renderPlan(){
     });
     root.appendChild(card);
   });
-  const note=el("div","note"); note.innerHTML=`<b>Plan view shows competition-lift reference loads at your current maxes, held flat.</b> The <b>Today</b> tab has the actual session — including squat/bench/deadlift <b>variations</b> as the main lift in earlier blocks, converging on the competition lifts as you peak. Logging drives real block-to-block progression.`;
+  const note=el("div","note"); note.innerHTML=`<b>Plan view shows competition-lift reference loads at your current maxes, held flat.</b> The <b>Today</b> tab has the actual session — including squat/bench/deadlift <b>variations</b> as the main lift in earlier blocks, converging on the competition lifts as you peak. Within a block, loads and sets now ramp week to week \u2014 accumulation adds volume, transmutation adds intensity, realization tapers \u2014 so the <b>Week</b> selector on Today shows the current week\u2019s targets. Logging drives real block-to-block progression.`;
   root.appendChild(note);
 }
 
@@ -1201,11 +1279,12 @@ function renderToday(){
   const testOpt=(state.cycle.testWeek!=null&&realz)?`<option value="test">🎯 Test day · wk ${state.cycle.testWeek}</option>`:"";
   const compOpt=state.compDate?`<option value="comp">🏆 Competition day</option>`:"";
   const dayOpts=Array.from({length:state.profile.daysPerWeek},(_,i)=>{const wd=weekdayDate(i); const dt=wd?(" \u00b7 "+wd.toLocaleDateString(undefined,{month:"short",day:"numeric"})):""; return '<option value="'+i+'">Day '+(i+1)+dt+'</option>';}).join("");
-  ctl.innerHTML=`<div class="dsel"><div class="field"><label>Block</label><select id="tblock">${blockOpts}${testOpt}${compOpt}</select></div><div class="field"><label>Training day</label><select id="tday">${dayOpts}</select></div></div>`;
+  ctl.innerHTML=`<div class="dsel"><div class="field"><label>Block</label><select id="tblock">${blockOpts}${testOpt}${compOpt}</select></div><div class="field"><label>Week</label><select id="tweek"></select></div><div class="field"><label>Training day</label><select id="tday">${dayOpts}</select></div></div>`;
   const mk=(id,lab,val)=>`<div class="slider"><div class="srow"><span>${lab}</span><b id="${id}v">${val}</b></div><input type="range" id="${id}" min="1" max="5" value="${val}"></div>`;
   ctl.innerHTML+=mk("sleep","Sleep",4)+mk("energy","Energy / drive",4)+mk("sore_squat","Sore · legs/back",1)+mk("sore_bench","Sore · chest/shoulders",1)+mk("sore_deadlift","Sore · posterior chain",1);
   root.appendChild(ctl);
   [...$("#tday").options].forEach((o,i)=>{ const wd=weekdayDate(i); if(wd) o.textContent="Day "+(i+1)+" \u00b7 "+wd.toLocaleDateString(undefined,{month:"short",day:"numeric"}); });
+  { const cur=currentBlockWeek(); if(state.plan.blocks[cur.block]) $("#tblock").value=String(cur.block); populateWeeks(); const tw=$("#tweek"); if(tw&&!tw.disabled){ const cb=state.plan.blocks[+$("#tblock").value]; tw.value=String(Math.min(cur.week,(cb?cb.lengthWk:1)-1)); } }
   const out=el("div"); out.id="todayout"; root.appendChild(out);
   const recompute=()=>{
     ["sleep","energy","sore_squat","sore_bench","sore_deadlift"].forEach(id=>{const e=$("#"+id);if(e)$("#"+id+"v").textContent=e.value;});
@@ -1214,6 +1293,7 @@ function renderToday(){
     if($("#tblock").value==="test"){ renderTestDay($("#todayout"), realz?realz.index:0); return; }
     if($("#tblock").value==="comp"){ renderCompDay($("#todayout")); return; }
     const b=state.plan.blocks[+$("#tblock").value], di=+$("#tday").value;
+    const wib=$("#tweek")?(+$("#tweek").value||0):0;
     // completion persists for a rolling week (so you can open it tomorrow and still see it),
     // keyed on block+day+time — independent of the date-scoped save id.
     const WEEK=7*86400000;
@@ -1224,7 +1304,9 @@ function renderToday(){
     const zones={}; b.prescriptions.forEach(p=>zones[p.method]=p.zone);
     const mod=(zone,lift)=>{const m=ZK.modulate(zone,band,check.soreness[lift]);return {zone:m.zone,down:m.downRegulated};};
     const GYM=["barbell","rack","dumbbell","cable","bench","bodyweight","machine"];
-    const day=(ZK.buildFullWeek(zones,b.budget.exposures,state.maxes,kit().plates,kit().bar,b.phase,b.index,GYM,state.speed,state.speedOrder,mod,band==="red",state.profile.daysPerWeek,state.freqPriority)[di])||[];
+    let gw=0; for(let i=0;i<b.index;i++) gw+=(state.plan.blocks[i].lengthWk||1); gw+=wib;
+    const deload=!!state.deloadWeek && state.deloadWeek===isoLocal(addDaysD(cycleStartMon(),gw*7));
+    const day=(ZK.buildFullWeek(zones,b.budget.exposures,state.maxes,kit().plates,kit().bar,b.phase,b.index,GYM,state.speed,state.speedOrder,mod,(band==="red")||deload,state.profile.daysPerWeek,state.freqPriority,wib,deload)[di])||[];
     // apply on-the-fly exercise swaps (per block+day+slot), recomputing load for main swaps
     day.forEach((it,idx)=>{
       const ov=state.swaps[`${b.index}|${di}|${idx}`]; if(!ov) return;
@@ -1238,11 +1320,13 @@ function renderToday(){
       it.load=Math.round(toUnit(pn.load,pn.unit||state.unit,state.unit));  // your pinned load, in the current unit
       it.pinned=true; });
     const o=$("#todayout"); o.innerHTML="";
+    if(deload){ const bn=el("div","fatbanner deloading"); bn.innerHTML="<b>Deload week active.</b> Volume and load are reduced to shed fatigue; your maxes are held. "; const cb=el("button","fatbtn ghost"); cb.textContent="Cancel deload"; cb.addEventListener("click",cancelDeload); bn.appendChild(cb); o.appendChild(bn); }
+    else { const fw=computeFatigue(); if(fw&&fw.recommendDeload){ const bn=el("div","fatbanner"); bn.innerHTML="<b>\u26a0 Fatigue elevated \u2014 consider a deload.</b> "+fw.reasons.join(" \u00b7 ")+" "; const db=el("button","fatbtn"); db.textContent="Take a deload week"; db.addEventListener("click",takeDeload); bn.appendChild(db); o.appendChild(bn); } }
     const desc={green:"Train as planned. Readiness only protects — never adds load.",amber:"Heavy work backs off a zone. Still a productive day.",red:"Cut the intensity. A red day is information, not failure."}[band];
     const sc=el("div","score "+band); sc.innerHTML=`<div class="num">${score}</div><div class="band">${band}</div><div class="desc">${desc}</div>`; o.appendChild(sc);
     const ld=lastDone(b.index,di);
     const _wd=weekdayDate(di), _ds=_wd?_wd.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"}):"";
-    o.appendChild(el("div","dayhdr",`Day ${di+1}${_ds?` · ${_ds}`:""} · ${day.length} exercises · ${b.phase}${ld!=null?` <span class="donebadge">✓ done ${fmtWhen(ld)}</span>`:""}`));
+    o.appendChild(el("div","dayhdr",`Day ${di+1}${_ds?` · ${_ds}`:""} · ${day.length} exercises · ${b.phase}${b.lengthWk>1?` \u00b7 Week ${wib+1} of ${b.lengthWk}`:""}${deload?` \u00b7 Deload week`:""}${ld!=null?` <span class="donebadge">✓ done ${fmtWhen(ld)}</span>`:""}`));
     let lastGroup="";
     day.forEach((e,idx)=>{
       if(e.group!==lastGroup){lastGroup=e.group;const lab={speed:"Speed work",main:"Main lift",accessory:"Accessory work",core:"Core & midline"}[e.group];o.appendChild(el("div","tierlab",lab));}
@@ -1309,7 +1393,7 @@ function renderToday(){
     const already=state.log.some(s=>s.sessionId===sid);
     if(!state.storeOK){const sb=el("div","storebar");sb.innerHTML="Saving is unavailable in this preview window. <b>Download the file and open it in your own browser</b> to save logs and progress between sessions.";o.appendChild(sb);}
     const startBtn=el("button","startbtn"); startBtn.textContent=already?"✎ Open workout log":"▶ Start workout";
-    startBtn.addEventListener("click",()=>{ state.todaySnap={day,bIndex:b.index,di,sid}; renderLog(); });
+    startBtn.addEventListener("click",()=>{ state.todaySnap={day,bIndex:b.index,di,sid,band}; renderLog(); });
     o.appendChild(startBtn);
   };
   state.exitLog=()=>{ const sp=$("#setup"); if(sp) sp.style.display=""; const c=$("#todayctl"); if(c) c.style.display=""; recompute(); };
@@ -1352,6 +1436,7 @@ function renderToday(){
         const load=+r.querySelector(".ll").value, reps=+r.querySelector(".lr").value, rpe=+r.querySelector(".lp").value;
         if(reps>0) state.log.push({lift:it.lift||it.name,exName:it.name,load:load||0,reps,rpe,setType:"working",method:it.method,downRegulated:!!it.downRegulated,unit:state.unit,ts,block:b.index,day:di,sessionId:sid});
       });
+      state.bands=(state.bands||[]).filter(x=>x.sessionId!==sid); state.bands.push({sessionId:sid,ts,band:(snap&&snap.band)||"green"});
       saveAll(); renderSchedule(); back();
     });
     const backb=el("button","logbtn ghost"); backb.textContent="Back to review"; backb.addEventListener("click",back);
@@ -1371,7 +1456,8 @@ function renderToday(){
     }
   }
   ctl.addEventListener("input",recompute);
-  $("#tblock").addEventListener("change",recompute);
+  $("#tblock").addEventListener("change",()=>{ populateWeeks(); recompute(); });
+  $("#tweek").addEventListener("change",recompute);
   $("#tday").addEventListener("change",recompute);
   recompute();
 }
@@ -1458,6 +1544,7 @@ function renderProgress(){
   else html+='<div class="pnote">No method-tagged volume yet.</div>';
   html+='</div>';
   root.innerHTML=html;
+  renderFatigue(root,true);
   renderSessions(root, sess, lifts, unit);   // interactive history: edit / delete past sessions
 }
 function renderSessions(root, sess, lifts, unit){
@@ -1593,6 +1680,36 @@ function isoLocal(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart
 function parseISO(s){ if(!s) return null; const p=s.split("-").map(Number); if(p.length!==3||p.some(isNaN)) return null; return new Date(p[0],p[1]-1,p[2]); }
 function cycleStartMon(){ return parseISO(state.cycleStart) || mondayThisWeek(); }
 function weekdayDate(di){ if(!state.trainingDays||state.trainingDays[di]==null) return null; return addDaysD(mondayThisWeek(), state.trainingDays[di]); }
+function currentBlockWeek(){ const bl=(state.plan&&state.plan.blocks)||[]; if(!bl.length) return {block:0,week:0};
+  const w=Math.max(0,Math.round((mondayThisWeek()-cycleStartMon())/(7*86400000))); let acc=0;
+  for(let i=0;i<bl.length;i++){ const L=bl[i].lengthWk||1; if(w<acc+L) return {block:i,week:w-acc}; acc+=L; }
+  const last=bl[bl.length-1]; return {block:bl.length-1,week:(last.lengthWk||1)-1}; }
+function populateWeeks(){ const sel=$("#tweek"); if(!sel) return; const bi=+$("#tblock").value; const b=state.plan.blocks[bi];
+  if(!b){ sel.innerHTML='<option value="0">\u2014</option>'; sel.disabled=true; return; } sel.disabled=false;
+  const L=b.lengthWk||1, prev=Math.min(+(sel.value||0),L-1);
+  sel.innerHTML=Array.from({length:L},(_,i)=>`<option value="${i}">Week ${i+1} of ${L}</option>`).join(""); sel.value=String(prev>=0?prev:0); }
+function computeFatigue(){
+  if(!state.plan||!state.plan.blocks||!state.plan.blocks.length||!ZK.fatigueWatch) return null;
+  const bands=(state.bands||[]).slice().sort((a,b)=>(a.ts||0)-(b.ts||0)).map(x=>x.band);
+  const phase=(state.plan.blocks[currentBlockWeek().block]||{}).phase||"accumulative";
+  const conv=logsIn(state.unit), now=Date.now(), D=86400000, ML=["squat","bench","deadlift"];
+  const mainSets=conv.filter(x=>ML.includes(x.lift)&&!x.downRegulated&&x.setType==="working"&&(now-(x.ts||0))<=14*D).map(x=>({lift:x.lift,load:x.load,reps:x.reps,rpe:x.rpe}));
+  const refE1rm={squat:state.maxes.squat,bench:state.maxes.bench,deadlift:state.maxes.deadlift};
+  const win=(lo,hi)=>{ const a=now-hi*D, b=now-lo*D, sets=conv.filter(x=>(x.ts||0)>a&&(x.ts||0)<=b), o={}; ML.forEach(l=>o[l]=ZK.e1rmFromHistory(sets,l)); return o; };
+  return ZK.fatigueWatch({recentBands:bands,phase,mainSets,refE1rm,recentE1rm:win(0,14),priorE1rm:win(14,28)});
+}
+function takeDeload(){ const cw=currentBlockWeek(); let gw=0; for(let i=0;i<cw.block;i++) gw+=(state.plan.blocks[i].lengthWk||1); gw+=cw.week; state.deloadWeek=isoLocal(addDaysD(cycleStartMon(),gw*7)); saveAll(); generate(); }
+function cancelDeload(){ state.deloadWeek=null; saveAll(); generate(); }
+function renderFatigue(root, prepend){
+  const fw=computeFatigue(); if(!fw) return;
+  const wrap=el("div","fatpanel"+(fw.recommendDeload?" hot":""));
+  const M=(label,m)=>`<div class="fatmark ${m.status}"><span class="fmk">${label}</span><span class="fms">${m.status==="elevated"?"elevated":m.status==="ok"?"ok":"\u2014"}</span><span class="fmd">${m.detail}</span></div>`;
+  const head=fw.recommendDeload?"\u26a0 Fatigue watch \u2014 deload recommended":(fw.elevated?"Fatigue watch \u2014 monitoring":"Fatigue watch \u2014 all clear");
+  wrap.innerHTML=`<div class="fathd">${head}</div>`+M("Readiness",fw.readiness)+M("Heavy RPE",fw.rpe)+M("e1RM trend",fw.e1rm);
+  if(fw.recommendDeload && state.deloadWeek==null){ const db=el("button","fatbtn"); db.textContent="Take a deload week"; db.addEventListener("click",takeDeload); wrap.appendChild(db); }
+  if(state.deloadWeek!=null){ const cb=el("button","fatbtn ghost"); cb.textContent="Cancel scheduled deload"; cb.addEventListener("click",cancelDeload); wrap.appendChild(cb); }
+  if(prepend && root.firstChild) root.insertBefore(wrap, root.firstChild); else root.appendChild(wrap);
+}
 function addDaysD(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
 function fmtSchedDate(d){ return d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"}); }
 function blockDayMains(b){
@@ -1651,6 +1768,8 @@ document.querySelectorAll("#wdpick button").forEach(b=>b.addEventListener("click
     if(Array.isArray(sv.log)) state.log=sv.log;
     if(sv.swaps) state.swaps=sv.swaps;
     if(sv.pins) state.pins=sv.pins;
+    if(Array.isArray(sv.bands)) state.bands=sv.bands;
+    if(typeof sv.deloadWeek!=="undefined") state.deloadWeek=sv.deloadWeek;
   if(sv.cycleStart) state.cycleStart=sv.cycleStart;
   if(Array.isArray(sv.trainingDays)){ state.trainingDays=sv.trainingDays; document.querySelectorAll("#wdpick button").forEach(b=>b.classList.toggle("on", sv.trainingDays.includes(+b.dataset.d))); }
   }
