@@ -773,7 +773,12 @@ var _ZK = (() => {
     { id: "sg_rdl", name: "Snatch-grip RDL", tier: "B", emphasis: ["deadlift"], muscles: ["hamstrings", "glutes", "upper_back"], equipment: ["barbell"], sets: 3, reps: "8", restSec: 90, cue: "Wide grip, hips back; extra upper-back and hamstring loading." },
     { id: "cs_row", name: "Chest-supported row", tier: "B", emphasis: ["deadlift", "bench"], muscles: ["lats", "upper_back"], equipment: ["dumbbell", "bench"], sets: 3, reps: "10", restSec: 90, cue: "Chest on the pad to kill momentum; row to the ribs, squeeze the mid-back." },
     { id: "shrug", name: "Barbell shrug", tier: "C", emphasis: ["deadlift"], muscles: ["upper_back"], equipment: ["barbell"], sets: 3, reps: "12", restSec: 60, cue: "Straight up, brief hold at the top; no rolling." },
-    { id: "lat_pulldown", name: "Lat pulldown", tier: "C", emphasis: ["deadlift"], muscles: ["lats"], equipment: ["cable"], sets: 3, reps: "12", restSec: 60, cue: "Drive the elbows down to the ribs; full stretch at the top." }
+    { id: "lat_pulldown", name: "Lat pulldown", tier: "C", emphasis: ["deadlift"], muscles: ["lats"], equipment: ["cable"], sets: 3, reps: "12", restSec: 60, cue: "Drive the elbows down to the ribs; full stretch at the top." },
+    // --- structural-balance additions (OURS): elbow flexors + weighted vertical pulls; no Z&K citation ---
+    { id: "db_curl", name: "DB biceps curl", tier: "C", emphasis: ["deadlift", "bench"], muscles: ["biceps"], equipment: ["dumbbell"], sets: 3, reps: "12", restSec: 45, cue: "Elbows pinned to the sides; supinate at the top, slow eccentric, no swing." },
+    { id: "hammer_curl", name: "Hammer curl", tier: "C", emphasis: ["deadlift", "bench"], muscles: ["biceps", "forearms"], equipment: ["dumbbell"], sets: 3, reps: "12", restSec: 45, cue: "Neutral grip throughout; hits brachialis and forearms, supports deadlift grip." },
+    { id: "w_pullup", name: "Weighted pull-up", tier: "B", emphasis: ["deadlift"], muscles: ["lats", "upper_back"], equipment: ["bodyweight"], sets: 4, reps: "6", restSec: 120, cue: "Pronated grip; belt or DB between the feet. Full hang to chest, no kipping." },
+    { id: "w_chinup", name: "Weighted chin-up", tier: "B", emphasis: ["deadlift", "bench"], muscles: ["lats", "biceps"], equipment: ["bodyweight"], sets: 4, reps: "6", restSec: 120, cue: "Supinated grip for more biceps; add load, full range, controlled descent." }
   ];
 
   // src/e1rm.ts
