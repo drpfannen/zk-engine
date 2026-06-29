@@ -194,6 +194,8 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-ra
 .fatbanner{border:1px solid var(--accent);background:rgba(255,90,44,.07);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--text)}
 .fatbanner.deloading{border-color:var(--line);background:var(--surface2)}
 .fatbanner .fatbtn{margin-top:10px;display:inline-block}
+.schpick{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-right:12px}
+.schpick input{background:var(--surface2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:4px 7px;font-family:var(--mono);font-size:12px}
 .wdrow{margin-top:16px}
 .wdlbl{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
 .wdpick{display:flex;gap:6px;flex-wrap:wrap}
@@ -1294,17 +1296,17 @@ function renderToday(){
     if($("#tblock").value==="comp"){ renderCompDay($("#todayout")); return; }
     const b=state.plan.blocks[+$("#tblock").value], di=+$("#tday").value;
     const wib=$("#tweek")?(+$("#tweek").value||0):0;
+    let gw=0; for(let i=0;i<b.index;i++) gw+=(state.plan.blocks[i].lengthWk||1); gw+=wib;
     // completion persists for a rolling week (so you can open it tomorrow and still see it),
     // keyed on block+day+time — independent of the date-scoped save id.
     const WEEK=7*86400000;
     const lastDone=(bi,d)=>{const t=state.log.filter(s=>s.block===bi&&s.day===d).map(s=>s.ts||0); return t.length?Math.max(...t):null;};
     const doneRecently=(bi,d)=>{const t=lastDone(bi,d); return t!=null && (Date.now()-t)<WEEK;};
     const fmtWhen=(ts)=>{const a=new Date(ts), n=new Date(); const days=Math.round((new Date(n.toDateString())-new Date(a.toDateString()))/86400000); return days<=0?"today":days===1?"yesterday":days<7?a.toLocaleDateString(undefined,{weekday:"short"}):a.toLocaleDateString(undefined,{month:"short",day:"numeric"});};
-    {const ts=$("#tday"); for(let d=0;d<ts.options.length;d++){const wd=weekdayDate(d); const dt=wd?" \u00b7 "+wd.toLocaleDateString(undefined,{month:"short",day:"numeric"}):""; ts.options[d].text=`Day ${d+1}`+dt+(doneRecently(b.index,d)?"  \u2713":"");}}
+    {const ts=$("#tday"); for(let d=0;d<ts.options.length;d++){const wd=weekdayDateFor(d,gw); const dt=wd?" \u00b7 "+wd.toLocaleDateString(undefined,{month:"short",day:"numeric"}):""; ts.options[d].text=`Day ${d+1}`+dt+(doneRecently(b.index,d)?"  \u2713":"");}}
     const zones={}; b.prescriptions.forEach(p=>zones[p.method]=p.zone);
     const mod=(zone,lift)=>{const m=ZK.modulate(zone,band,check.soreness[lift]);return {zone:m.zone,down:m.downRegulated};};
     const GYM=["barbell","rack","dumbbell","cable","bench","bodyweight","machine"];
-    let gw=0; for(let i=0;i<b.index;i++) gw+=(state.plan.blocks[i].lengthWk||1); gw+=wib;
     const deload=!!state.deloadWeek && state.deloadWeek===isoLocal(addDaysD(cycleStartMon(),gw*7));
     const day=(ZK.buildFullWeek(zones,b.budget.exposures,state.maxes,kit().plates,kit().bar,b.phase,b.index,GYM,state.speed,state.speedOrder,mod,(band==="red")||deload,state.profile.daysPerWeek,state.freqPriority,wib,deload)[di])||[];
     // apply on-the-fly exercise swaps (per block+day+slot), recomputing load for main swaps
@@ -1325,7 +1327,7 @@ function renderToday(){
     const desc={green:"Train as planned. Readiness only protects — never adds load.",amber:"Heavy work backs off a zone. Still a productive day.",red:"Cut the intensity. A red day is information, not failure."}[band];
     const sc=el("div","score "+band); sc.innerHTML=`<div class="num">${score}</div><div class="band">${band}</div><div class="desc">${desc}</div>`; o.appendChild(sc);
     const ld=lastDone(b.index,di);
-    const _wd=weekdayDate(di), _ds=_wd?_wd.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"}):"";
+    const _wd=weekdayDateFor(di,gw), _ds=_wd?_wd.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"}):"";
     o.appendChild(el("div","dayhdr",`Day ${di+1}${_ds?` · ${_ds}`:""} · ${day.length} exercises · ${b.phase}${b.lengthWk>1?` \u00b7 Week ${wib+1} of ${b.lengthWk}`:""}${deload?` \u00b7 Deload week`:""}${ld!=null?` <span class="donebadge">✓ done ${fmtWhen(ld)}</span>`:""}`));
     let lastGroup="";
     day.forEach((e,idx)=>{
@@ -1393,19 +1395,20 @@ function renderToday(){
     const already=state.log.some(s=>s.sessionId===sid);
     if(!state.storeOK){const sb=el("div","storebar");sb.innerHTML="Saving is unavailable in this preview window. <b>Download the file and open it in your own browser</b> to save logs and progress between sessions.";o.appendChild(sb);}
     const startBtn=el("button","startbtn"); startBtn.textContent=already?"✎ Open workout log":"▶ Start workout";
-    startBtn.addEventListener("click",()=>{ state.todaySnap={day,bIndex:b.index,di,sid,band}; renderLog(); });
+    startBtn.addEventListener("click",()=>{ state.todaySnap={day,bIndex:b.index,di,sid,band,gw}; renderLog(); });
     o.appendChild(startBtn);
   };
   state.exitLog=()=>{ const sp=$("#setup"); if(sp) sp.style.display=""; const c=$("#todayctl"); if(c) c.style.display=""; recompute(); };
   function renderLog(){
     const snap=state.todaySnap; if(!snap) return;
     const day=snap.day, di=snap.di, sid=snap.sid, b=state.plan.blocks[snap.bIndex];
+    const gw=(snap&&snap.gw)||0;
     const ctlEl=$("#todayctl"); if(ctlEl) ctlEl.style.display="none";
     const sp=$("#setup"); if(sp) sp.style.display="none";   // hide the whole Setup panel for a clean log page
     const back=()=>{ state.exitLog(); };
     const o=$("#todayout"); o.innerHTML="";
     const bk=el("button","backbtn"); bk.innerHTML="← Back to review"; bk.addEventListener("click",back); o.appendChild(bk);
-    const _wd=weekdayDate(di), _ds=_wd?_wd.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"}):"";
+    const _wd=weekdayDateFor(di,gw), _ds=_wd?_wd.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"}):"";
     o.appendChild(el("div","loghdr","Logging · Day "+(di+1)+(_ds?" · "+_ds:"")+" · "+b.phase));
     if(!state.storeOK){const sb=el("div","storebar");sb.innerHTML="Saving is unavailable in this preview window. <b>Download the file and open it in your own browser</b> to save between sessions.";o.appendChild(sb);}
     const saved=state.log.filter(s=>s.sessionId===sid), isLogged=saved.length>0;
@@ -1680,6 +1683,7 @@ function isoLocal(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart
 function parseISO(s){ if(!s) return null; const p=s.split("-").map(Number); if(p.length!==3||p.some(isNaN)) return null; return new Date(p[0],p[1]-1,p[2]); }
 function cycleStartMon(){ return parseISO(state.cycleStart) || mondayThisWeek(); }
 function weekdayDate(di){ if(!state.trainingDays||state.trainingDays[di]==null) return null; return addDaysD(mondayThisWeek(), state.trainingDays[di]); }
+function weekdayDateFor(di,gw){ if(!state.trainingDays||state.trainingDays[di]==null) return null; return addDaysD(cycleStartMon(), (gw||0)*7 + state.trainingDays[di]); }
 function currentBlockWeek(){ const bl=(state.plan&&state.plan.blocks)||[]; if(!bl.length) return {block:0,week:0};
   const w=Math.max(0,Math.round((mondayThisWeek()-cycleStartMon())/(7*86400000))); let acc=0;
   for(let i=0;i<bl.length;i++){ const L=bl[i].lengthWk||1; if(w<acc+L) return {block:i,week:w-acc}; acc+=L; }
@@ -1728,7 +1732,12 @@ function renderSchedule(){
   const hd=el("div","schhd"); hd.innerHTML="<b>Schedule</b> \u2014 sessions on "+useDays.map(d=>WD[d]).join(" / ")+(state.compDate&&dc!=null?" \u00b7 competition "+fmtCompDate(0)+" ("+(dc>0?dc+" days out":dc===0?"today":"past")+")":""); root.appendChild(hd);
   root.appendChild(el("div","pnote","Dates are the plan as written. Miss a session or shift a day and the real dates drift \u2014 treat this as a guide, not a fixed calendar."));
   const startRow=el("div","schstart"); startRow.innerHTML="cycle start: <b>"+cycleStartMon().toLocaleDateString(undefined,{month:"short",day:"numeric"})+"</b>";
-  const reb=el("button","minibtn"); reb.textContent="re-anchor to this week"; reb.addEventListener("click",()=>{ state.cycleStart=isoLocal(mondayThisWeek()); saveAll(); generate(); }); startRow.appendChild(reb); root.appendChild(startRow);
+  const dpk=el("label","schpick"); dpk.appendChild(document.createTextNode("plan start "));
+  const dip=el("input"); dip.type="date"; dip.value=state.cycleStart||isoLocal(mondayThisWeek());
+  dip.addEventListener("change",()=>{ const v=dip.value; if(!v) return; const p=v.split("-").map(Number); const d=new Date(p[0],p[1]-1,p[2]); if(isNaN(d)) return; const g=(d.getDay()+6)%7; state.cycleStart=isoLocal(addDaysD(d,-g)); saveAll(); generate(); });
+  dpk.appendChild(dip); startRow.appendChild(dpk);
+  const reb=el("button","minibtn"); reb.textContent="reset to this week"; reb.addEventListener("click",()=>{ state.cycleStart=isoLocal(mondayThisWeek()); saveAll(); generate(); }); startRow.appendChild(reb); root.appendChild(startRow);
+  root.appendChild(el("div","pnote","Pick any date to re-map the whole plan \u2014 every week\u2019s sessions below shift to the new calendar. The date snaps to that week\u2019s Monday."));
   const loggedDates=new Set(state.log.map(x=>isoLocal(new Date(x.ts)))), todayIso=isoLocal(new Date());
   const mon0=cycleStartMon(); let wk=1;
   state.plan.blocks.forEach(b=>{
