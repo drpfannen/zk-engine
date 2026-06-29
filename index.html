@@ -1300,10 +1300,10 @@ function renderToday(){
     // completion persists for a rolling week (so you can open it tomorrow and still see it),
     // keyed on block+day+time — independent of the date-scoped save id.
     const WEEK=7*86400000;
-    const lastDone=(bi,d)=>{const t=state.log.filter(s=>s.block===bi&&s.day===d).map(s=>s.ts||0); return t.length?Math.max(...t):null;};
-    const doneRecently=(bi,d)=>{const t=lastDone(bi,d); return t!=null && (Date.now()-t)<WEEK;};
+    const lastDone=(bi,g,d)=>{const t=state.log.filter(s=>{ if(s.block!==bi||s.day!==d) return false; let sg=s.gw; if(sg==null){ sg=0; for(let i=0;i<s.block;i++) sg+=(state.plan.blocks[i].lengthWk||1); } return sg===g; }).map(s=>s.ts||0); return t.length?Math.max(...t):null;};
+    const doneRecently=(bi,g,d)=>lastDone(bi,g,d)!=null;
     const fmtWhen=(ts)=>{const a=new Date(ts), n=new Date(); const days=Math.round((new Date(n.toDateString())-new Date(a.toDateString()))/86400000); return days<=0?"today":days===1?"yesterday":days<7?a.toLocaleDateString(undefined,{weekday:"short"}):a.toLocaleDateString(undefined,{month:"short",day:"numeric"});};
-    {const ts=$("#tday"); for(let d=0;d<ts.options.length;d++){const wd=weekdayDateFor(d,gw); const dt=wd?" \u00b7 "+wd.toLocaleDateString(undefined,{month:"short",day:"numeric"}):""; ts.options[d].text=`Day ${d+1}`+dt+(doneRecently(b.index,d)?"  \u2713":"");}}
+    {const ts=$("#tday"); for(let d=0;d<ts.options.length;d++){const wd=weekdayDateFor(d,gw); const dt=wd?" \u00b7 "+wd.toLocaleDateString(undefined,{month:"short",day:"numeric"}):""; ts.options[d].text=`Day ${d+1}`+dt+(doneRecently(b.index,gw,d)?"  \u2713":"");}}
     const zones={}; b.prescriptions.forEach(p=>zones[p.method]=p.zone);
     const mod=(zone,lift)=>{const m=ZK.modulate(zone,band,check.soreness[lift]);return {zone:m.zone,down:m.downRegulated};};
     const GYM=["barbell","rack","dumbbell","cable","bench","bodyweight","machine"];
@@ -1326,7 +1326,7 @@ function renderToday(){
     else { const fw=computeFatigue(); if(fw&&fw.recommendDeload){ const bn=el("div","fatbanner"); bn.innerHTML="<b>\u26a0 Fatigue elevated \u2014 consider a deload.</b> "+fw.reasons.join(" \u00b7 ")+" "; const db=el("button","fatbtn"); db.textContent="Take a deload week"; db.addEventListener("click",takeDeload); bn.appendChild(db); o.appendChild(bn); } }
     const desc={green:"Train as planned. Readiness only protects — never adds load.",amber:"Heavy work backs off a zone. Still a productive day.",red:"Cut the intensity. A red day is information, not failure."}[band];
     const sc=el("div","score "+band); sc.innerHTML=`<div class="num">${score}</div><div class="band">${band}</div><div class="desc">${desc}</div>`; o.appendChild(sc);
-    const ld=lastDone(b.index,di);
+    const ld=lastDone(b.index,gw,di);
     const _wd=weekdayDateFor(di,gw), _ds=_wd?_wd.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"}):"";
     o.appendChild(el("div","dayhdr",`Day ${di+1}${_ds?` · ${_ds}`:""} · ${day.length} exercises · ${b.phase}${b.lengthWk>1?` \u00b7 Week ${wib+1} of ${b.lengthWk}`:""}${deload?` \u00b7 Deload week`:""}${ld!=null?` <span class="donebadge">✓ done ${fmtWhen(ld)}</span>`:""}`));
     let lastGroup="";
@@ -1437,7 +1437,7 @@ function renderToday(){
       lp.querySelectorAll(".logrow").forEach(r=>{
         const it=day[+r.getAttribute("data-ex")];
         const load=+r.querySelector(".ll").value, reps=+r.querySelector(".lr").value, rpe=+r.querySelector(".lp").value;
-        if(reps>0) state.log.push({lift:it.lift||it.name,exName:it.name,load:load||0,reps,rpe,setType:"working",method:it.method,downRegulated:!!it.downRegulated,unit:state.unit,ts,block:b.index,day:di,sessionId:sid});
+        if(reps>0) state.log.push({lift:it.lift||it.name,exName:it.name,load:load||0,reps,rpe,setType:"working",method:it.method,downRegulated:!!it.downRegulated,unit:state.unit,ts,block:b.index,day:di,gw,sessionId:sid});
       });
       state.bands=(state.bands||[]).filter(x=>x.sessionId!==sid); state.bands.push({sessionId:sid,ts,band:(snap&&snap.band)||"green"});
       saveAll(); renderSchedule(); back();
