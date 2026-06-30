@@ -1391,7 +1391,7 @@ function renderToday(){
     o.appendChild(n);
     // Start workout → snapshot this reviewed session, then open the focused log view
     const today=new Date().toISOString().slice(0,10);
-    const sid=`${today}|b${b.index}|d${di}`;
+    const sid=`${today}|b${b.index}|w${gw}|d${di}`;
     const already=state.log.some(s=>s.sessionId===sid);
     if(!state.storeOK){const sb=el("div","storebar");sb.innerHTML="Saving is unavailable in this preview window. <b>Download the file and open it in your own browser</b> to save logs and progress between sessions.";o.appendChild(sb);}
     const startBtn=el("button","startbtn"); startBtn.textContent=already?"✎ Open workout log":"▶ Start workout";
