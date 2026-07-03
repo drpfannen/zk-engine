@@ -136,6 +136,24 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-ra
 .logrow .lprev{font-family:var(--mono);font-size:10px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .logrow .lcol{font-family:var(--mono);font-size:9px;letter-spacing:.03em;color:var(--faint);text-align:right}
 .bump{font-family:var(--mono);font-size:9px;letter-spacing:.03em;color:#5fb87a;border:1px solid #5fb87a;border-radius:4px;padding:1px 5px;margin-left:5px;white-space:nowrap}
+.setuphd{width:100%;text-align:left;background:transparent;border:none;color:var(--text);font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 2px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.setupchev{color:var(--muted);font-size:10px;transition:transform .15s}
+#setup:not(.collapsed) .setupchev{transform:rotate(180deg)}
+#setup.collapsed{padding-bottom:10px}
+#setup.collapsed > :not(.setuphd){display:none}
+.schrow.tappable{cursor:pointer;transition:background .1s}
+.schrow.tappable:hover{background:var(--surface2)}
+.schrow.tappable:active{opacity:.65}
+.schgo{margin-left:auto;color:var(--muted);font-size:16px;font-weight:700}
+.chpanel{border:1px solid var(--accent);background:rgba(255,90,44,.06);border-radius:10px;padding:14px;margin:0 0 16px}
+.chhd{font-size:14px;font-weight:700;color:var(--accent);margin-bottom:4px}
+.chsub{font-size:12px;color:var(--muted);margin-bottom:11px}
+.chrow{display:grid;grid-template-columns:64px 84px 1fr;gap:10px;align-items:center;margin-bottom:8px}
+.chlift{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.chmax,.chsel{background:var(--surface);border:1px solid var(--line);border-radius:6px;color:var(--text);padding:6px 8px;font-family:var(--mono);font-size:13px;text-align:right;width:100%}
+.chsel{text-align:left}
+.chnote{font-size:11px;color:var(--muted)}
+.chbtns{display:flex;gap:10px;margin-top:12px}
 .logrow.loghd{margin-bottom:3px}
 .logrow.loghd .logn,.logrow.loghd .lprev{font-size:9px;letter-spacing:.03em;color:var(--faint)}
 .logbtn{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;background:var(--accent);color:#15171c;border:none;border-radius:6px;padding:8px 14px;margin-top:9px;cursor:pointer;font-weight:600}
@@ -310,7 +328,7 @@ footer{color:var(--faint);font-family:var(--mono);font-size:10px;text-align:cent
   <p class="tag">Principles-based strength programming after <b>Zatsiorsky &amp; Kraemer</b>. Your maxes in, a real plan out — in plates you can load.</p>
 </header>
 
-<div class="panel" id="setup">
+<div class="panel collapsed" id="setup"><button type="button" class="setuphd" id="setuptoggle">Setup &amp; settings <span class="setupchev">&#9662;</span></button>
   <h2>Setup</h2>
   <div class="body">
     <div class="grid">
@@ -337,16 +355,16 @@ footer{color:var(--faint);font-family:var(--mono);font-size:10px;text-align:cent
 </div>
 
 <div class="tabs">
-  <button id="t-plan" class="on">Plan</button>
+  <button id="t-plan">Plan</button>
   <button id="t-today">Today</button>
   <button id="t-progress">Progress</button>
-  <button id="t-sched">Schedule</button>
+  <button id="t-sched" class="on">Schedule</button>
 </div>
 
-<div id="plan"></div>
+<div id="plan" class="hidden"></div>
 <div id="today" class="hidden"></div>
 <div id="progress" class="hidden"></div>
-<div id="schedule" class="hidden"></div>
+<div id="schedule"></div>
 
 <footer>deterministic engine · loads round to your plates · readiness only ever lightens the day<br>built to learn — not medical or coaching advice</footer>
 </div>
@@ -929,6 +947,38 @@ var _ZK = (() => {
     }
     return out;
   }
+  function cycleHandoff(args) {
+    const newMaxes = {}, maxNotes = {};
+    for (const l of args.lifts) {
+      const base = args.maxes[l] || 0, adj = args.autoRegAdj[l] || 0;
+      let nm, src;
+      if (args.testResults[l] && args.testResults[l] > 0) {
+        nm = Math.round(args.testResults[l]);
+        src = "tested single";
+      } else if (Math.abs(adj) > 1e-9) {
+        nm = Math.round(base * (1 + adj));
+        src = `autoreg ${adj > 0 ? "+" : "\u2212"}${Math.abs(adj * 100).toFixed(1)}%`;
+      } else if (args.cycleE1rm[l] && args.cycleE1rm[l] > 0) {
+        nm = Math.round(args.cycleE1rm[l]);
+        src = "cycle e1RM";
+      } else {
+        nm = Math.round(base);
+        src = "held \u2014 no new evidence";
+      }
+      newMaxes[l] = nm;
+      const d = nm - Math.round(base);
+      maxNotes[l] = `${src}${d !== 0 ? ` (${d > 0 ? "+" : "\u2212"}${Math.abs(d)})` : " (no change)"}`;
+    }
+    let lagging = args.lifts[0], best = Infinity;
+    for (const l of args.lifts) {
+      const n = newMaxes[l] / (args.ratioCoeffs[l] || 1);
+      if (n < best) {
+        best = n;
+        lagging = l;
+      }
+    }
+    return { newMaxes, maxNotes, lagging, ratioNote: `${lagging} sits furthest below the target strength ratio \u2014 next cycle favors it.` };
+  }
 
   // src/accessory.ts
   var VOL = {
@@ -1200,6 +1250,7 @@ var _ZK = (() => {
     eligibleForE1rm,
     logAgainst,
     rebaseline,
+    cycleHandoff,
     tonnageByMethod,
     KITS,
     buildWeek,
@@ -1218,10 +1269,10 @@ var _ZK = (() => {
 const $=s=>document.querySelector(s), el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e};
 const lifts=["squat","bench","deadlift"];
 const PCOL={45:"#2f5fae",35:"#c79a1e",25:"#2e8b50",20:"#2f5fae",15:"#c79a1e",10:"#3a3f4b",5:"#b03a2a",2.5:"#6b7280",1.25:"#8a9099"};
-const state={plan:null,maxes:{},unit:"lb",profile:{},cycle:{},log:[],swaps:{},pins:{},bands:[],deloadWeek:null,autoReg:{},autoRegOn:true,autoRegLast:null,storeOK:true};
+const state={plan:null,maxes:{},unit:"lb",profile:{},cycle:{},log:[],swaps:{},pins:{},bands:[],deloadWeek:null,autoReg:{},autoRegOn:true,autoRegLast:null,handoffDismissed:null,storeOK:true};
 const STORE="zk_v1", LBKG=2.2046226;
 function loadStore(){try{const r=localStorage.getItem(STORE);return r?JSON.parse(r):null;}catch(e){state.storeOK=false;return null;}}
-function saveAll(){try{localStorage.setItem(STORE,JSON.stringify({maxes:state.maxes,unit:state.unit,log:state.log,swaps:state.swaps,pins:state.pins,bands:state.bands,deloadWeek:state.deloadWeek,autoReg:state.autoReg,trainingDays:state.trainingDays,cycleStart:state.cycleStart,settings:{status:$("#status").value,planby:$("#planby").value,days:$("#days").value,weeks:$("#weeks").value,test:$("#test").value,compdate:$("#compdate").value,unit:$("#unit").value,speed:$("#speed").value,freq:$("#freq").value,autoreg:$("#autoreg")?$("#autoreg").value:"on",squat:$("#squat").value,bench:$("#bench").value,deadlift:$("#deadlift").value}}));}catch(e){state.storeOK=false;}}
+function saveAll(){try{localStorage.setItem(STORE,JSON.stringify({maxes:state.maxes,unit:state.unit,log:state.log,swaps:state.swaps,pins:state.pins,bands:state.bands,deloadWeek:state.deloadWeek,autoReg:state.autoReg,handoffDismissed:state.handoffDismissed,trainingDays:state.trainingDays,cycleStart:state.cycleStart,settings:{status:$("#status").value,planby:$("#planby").value,days:$("#days").value,weeks:$("#weeks").value,test:$("#test").value,compdate:$("#compdate").value,unit:$("#unit").value,speed:$("#speed").value,freq:$("#freq").value,autoreg:$("#autoreg")?$("#autoreg").value:"on",squat:$("#squat").value,bench:$("#bench").value,deadlift:$("#deadlift").value}}));}catch(e){state.storeOK=false;}}
 const toUnit=(load,from,to)=> from===to?load:(from==="lb"&&to==="kg"?load/LBKG:load*LBKG);
 function logsIn(unit){return state.log.map(x=>({...x,load:toUnit(x.load,x.unit||"lb",unit)}));}
 function buildCsv(){
@@ -1450,6 +1501,7 @@ function renderToday(){
     o.appendChild(startBtn);
   };
   state.exitLog=()=>{ const sp=$("#setup"); if(sp) sp.style.display=""; const c=$("#todayctl"); if(c) c.style.display=""; recompute(); };
+  state.recompute=recompute;
   function renderLog(){
     const snap=state.todaySnap; if(!snap) return;
     const day=snap.day, di=snap.di, sid=snap.sid, b=state.plan.blocks[snap.bIndex];
@@ -1607,6 +1659,7 @@ function renderProgress(){
   html+='</div>';
   root.innerHTML=html;
   renderFatigue(root,true);
+  renderCycleHandoff(root,true);
   renderSessions(root, sess, lifts, unit);   // interactive history: edit / delete past sessions
 }
 function renderSessions(root, sess, lifts, unit){
@@ -1806,6 +1859,37 @@ function renderAutoReg(o){ ensureAutoReg(); if(state.autoRegOn===false) return;
   const rb=el("button","fatbtn ghost arreset"); rb.textContent="Reset autoreg"; rb.addEventListener("click",()=>{ resetAutoReg(); saveAll(); generate(); }); wrap.appendChild(rb);
   o.appendChild(wrap);
 }
+function cycleComplete(){ if(!state.plan||!state.plan.blocks||!state.plan.blocks.length) return false;
+  const total=state.plan.blocks.reduce((a,b)=>a+(b.lengthWk||1),0); if(total<=0) return false;
+  const wks=Math.round((mondayThisWeek()-cycleStartMon())/(7*86400000)); if(wks<total) return false;
+  if(state.handoffDismissed && state.handoffDismissed===cycleStartMon().getTime()) return false;
+  return true; }
+function gatherHandoff(){ if(!ZK.cycleHandoff) return null; const lifts=["squat","bench","deadlift"];
+  const conv=logsIn(state.unit), startMs=cycleStartMon().getTime(), cy=conv.filter(s=>(s.ts||0)>=startMs);
+  const testResults={}, cycleE1rm={}, adj={};
+  lifts.forEach(l=>{ const t=cy.filter(s=>s.lift===l && /test single/i.test(s.exName||"")); testResults[l]=t.length?Math.max.apply(null,t.map(x=>x.load)):null;
+    cycleE1rm[l]=ZK.e1rmFromHistory(cy,l); adj[l]=(state.autoReg&&state.autoReg[l]?state.autoReg[l].adj:0)||0; });
+  return ZK.cycleHandoff({maxes:state.maxes, autoRegAdj:adj, testResults, cycleE1rm, ratioCoeffs:{squat:1.0,bench:0.72,deadlift:1.2}, lifts}); }
+function applyHandoff(nm,freq){ ["squat","bench","deadlift"].forEach(l=>{ state.maxes[l]=Math.round(nm[l]); const e=$("#"+l); if(e) e.value=state.maxes[l]; });
+  const fq=$("#freq"); if(fq && freq) fq.value=freq;
+  resetAutoReg(); state.handoffDismissed=null; state.deloadWeek=null; state.cycleStart=isoLocal(mondayThisWeek());
+  saveAll(); generate(); showTab("sched"); }
+function renderCycleHandoff(root, prepend){ if(!cycleComplete()) return; const prop=gatherHandoff(); if(!prop) return;
+  const lifts=["squat","bench","deadlift"], LAB={squat:"Squat",bench:"Bench",deadlift:"Deadlift"};
+  const wrap=el("div","chpanel");
+  wrap.innerHTML='<div class="chhd">Cycle complete \u2014 roll forward</div><div class="chsub">Review next cycle\u2019s starting point. Nothing changes until you confirm.</div>';
+  const ins={};
+  lifts.forEach(l=>{ const row=el("div","chrow"); row.appendChild(el("span","chlift",LAB[l]));
+    const inp=el("input"); inp.type="number"; inp.className="chmax"; inp.value=String(prop.newMaxes[l]); ins[l]=inp; row.appendChild(inp);
+    row.appendChild(el("span","chnote",prop.maxNotes[l])); wrap.appendChild(row); });
+  const erow=el("div","chrow"); erow.appendChild(el("span","chlift","Emphasis"));
+  const sel=el("select"); sel.className="chsel"; lifts.forEach(l=>{const o=el("option",null,LAB[l]); o.value=l; if(l===prop.lagging)o.selected=true; sel.appendChild(o);}); erow.appendChild(sel);
+  erow.appendChild(el("span","chnote",prop.ratioNote)); wrap.appendChild(erow);
+  const btns=el("div","chbtns");
+  const go=el("button","fatbtn","Start next cycle"); go.addEventListener("click",()=>{ const nm={}; lifts.forEach(l=>nm[l]=+ins[l].value||prop.newMaxes[l]); applyHandoff(nm,sel.value); });
+  const no=el("button","fatbtn ghost","Not yet"); no.addEventListener("click",()=>{ state.handoffDismissed=cycleStartMon().getTime(); saveAll(); renderProgress(); renderSchedule(); });
+  btns.appendChild(go); btns.appendChild(no); wrap.appendChild(btns);
+  if(prepend && root.firstChild) root.insertBefore(wrap, root.firstChild); else root.appendChild(wrap); }
 function addDaysD(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
 function fmtSchedDate(d){ return d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"}); }
 function blockDayMains(b){
@@ -1832,7 +1916,7 @@ function renderSchedule(){
   root.appendChild(el("div","pnote","Pick any date to re-map the whole plan \u2014 every week\u2019s sessions below shift to the new calendar. The date snaps to that week\u2019s Monday."));
   const loggedDates=new Set(state.log.map(x=>isoLocal(new Date(x.ts)))), todayIso=isoLocal(new Date());
   const mon0=cycleStartMon(); let wk=1;
-  state.plan.blocks.forEach(b=>{
+  state.plan.blocks.forEach((b,bIdx)=>{
     const mains=blockDayMains(b);
     for(let i=0;i<b.lengthWk;i++,wk++){
       const wsec=el("div","wsec");
@@ -1840,12 +1924,15 @@ function renderSchedule(){
       useDays.forEach((d,di)=>{
         const date=addDaysD(mon0,(wk-1)*7+d), dIso=isoLocal(date);
         const focus=mains[di]?(" \u00b7 "+mains[di]):"", done=loggedDates.has(dIso), isToday=dIso===todayIso;
-        const row=el("div","schrow"+(done?" done":"")+(isToday?" today":"")); row.innerHTML='<span class="sdate">'+fmtSchedDate(date)+'</span><span class="sday">Day '+(di+1)+focus+'</span>'+(done?'<span class="schk">\u2713</span>':isToday?'<span class="schtoday">today</span>':'');
+        const row=el("div","schrow tappable"+(done?" done":"")+(isToday?" today":"")); row.innerHTML='<span class="sdate">'+fmtSchedDate(date)+'</span><span class="sday">Day '+(di+1)+focus+'</span>'+(done?'<span class="schk">\u2713</span>':isToday?'<span class="schtoday">today</span>':'<span class="schgo">\u203a</span>');
+        row.addEventListener("click",()=>openDay(bIdx,i,di));
         wsec.appendChild(row);
       });
       root.appendChild(wsec);
     }
   });
+  if(cycleComplete()){ const bn=el("div","fatbanner"); bn.innerHTML="<b>Cycle complete.</b> Roll your maxes and emphasis into the next cycle. ";
+    const gb=el("button","fatbtn"); gb.textContent="Review roll-forward"; gb.addEventListener("click",()=>showTab("progress")); bn.appendChild(gb); root.insertBefore(bn, root.firstChild); }
   if(state.compDate){ const c=compDateObj(); if(c){ const m=el("div","schcomp"); m.innerHTML="\ud83c\udfc6 <b>Competition</b> \u00b7 "+c.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}); root.appendChild(m); } }
 }
 function showTab(t){
@@ -1856,10 +1943,14 @@ function showTab(t){
   if(t==="progress") renderProgress();
   if(t==="sched") renderSchedule();
 }
+function openDay(bi,wib,di){ const tb=$("#tblock"); if(!tb) return; tb.value=String(bi); if(typeof populateWeeks==="function") populateWeeks();
+  const tw=$("#tweek"); if(tw&&!tw.disabled) tw.value=String(wib); const tday=$("#tday"); if(tday) tday.value=String(di);
+  showTab("today"); if(state.recompute) state.recompute(); const tp=$("#today"); if(tp&&tp.scrollIntoView) tp.scrollIntoView({block:"start"}); }
 $("#t-plan").addEventListener("click",()=>showTab("plan"));
 $("#t-today").addEventListener("click",()=>showTab("today"));
 $("#t-progress").addEventListener("click",()=>showTab("progress"));
 $("#t-sched").addEventListener("click",()=>showTab("sched"));
+$("#setuptoggle")&&$("#setuptoggle").addEventListener("click",()=>$("#setup").classList.toggle("collapsed"));
 document.querySelectorAll("#wdpick button").forEach(b=>b.addEventListener("click",()=>{ b.classList.toggle("on"); generate(); }));
 (function init(){
   try{localStorage.setItem("zk_probe","1");localStorage.removeItem("zk_probe");}catch(e){state.storeOK=false;}
@@ -1872,9 +1963,10 @@ document.querySelectorAll("#wdpick button").forEach(b=>b.addEventListener("click
     if(Array.isArray(sv.bands)) state.bands=sv.bands;
     if(typeof sv.deloadWeek!=="undefined") state.deloadWeek=sv.deloadWeek;
     if(sv.autoReg) state.autoReg=sv.autoReg;
+    if(typeof sv.handoffDismissed!=="undefined") state.handoffDismissed=sv.handoffDismissed;
   if(sv.cycleStart) state.cycleStart=sv.cycleStart;
   if(Array.isArray(sv.trainingDays)){ state.trainingDays=sv.trainingDays; document.querySelectorAll("#wdpick button").forEach(b=>b.classList.toggle("on", sv.trainingDays.includes(+b.dataset.d))); }
-  }
+  } else { const su=$("#setup"); if(su) su.classList.remove("collapsed"); }
   generate();
 })();
 </script>
