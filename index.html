@@ -145,6 +145,8 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-ra
 .schrow.tappable:hover{background:var(--surface2)}
 .schrow.tappable:active{opacity:.65}
 .schgo{margin-left:auto;color:var(--muted);font-size:16px;font-weight:700}
+.schrow.tapered{border-left:2px solid #e0a92e}
+.schrow.tapered .sday{color:var(--text)}
 .chpanel{border:1px solid var(--accent);background:rgba(255,90,44,.06);border-radius:10px;padding:14px;margin:0 0 16px}
 .chhd{font-size:14px;font-weight:700;color:var(--accent);margin-bottom:4px}
 .chsub{font-size:12px;color:var(--muted);margin-bottom:11px}
@@ -1165,6 +1167,15 @@ var _ZK = (() => {
     return { recWeight: lastW, bumped: false, region, increment, reason: `hold at ${lastW}` };
   }
   var round5 = (x) => Math.round(x / 5) * 5;
+  function taperPlan() {
+    return [
+      { daysOut: 12, lift: "deadlift" },
+      { daysOut: 10, lift: "squat" },
+      { daysOut: 8, lift: "bench" },
+      { daysOut: 6, lift: "squat" },
+      { daysOut: 4, lift: "bench" }
+    ];
+  }
   function taperMainPrescription(lift, daysOut, workingMax) {
     if (daysOut == null || daysOut < 0 || daysOut > 14) return { inTaper: false, drop: false, sets: 0, reps: 0, load: 0, label: "", taperWeek: 99 };
     const taperWeek = daysOut >= 8 ? -2 : daysOut >= 5 ? -1 : 0;
@@ -1296,6 +1307,7 @@ var _ZK = (() => {
     buildFullWeek,
     accessoryProgression,
     taperMainPrescription,
+    taperPlan,
     selectAccessories,
     selectMain,
     MAIN_MOVEMENTS,
@@ -1390,7 +1402,7 @@ function renderPlan(){
     head.appendChild(el("div","idx","B"+b.index));
     head.appendChild(el("div","phase",b.phase));
     head.appendChild(el("div","wks",`wk ${wk}–${wk+b.lengthWk-1}`+(taper?" · taper→test":"")));
-    if(taper&&state.cycle.testWeek!=null) head.appendChild(el("div","testbadge",`🎯 TEST · wk ${state.cycle.testWeek}`));
+    if(taper&&state.cycle.testWeek!=null&&state.planBy!=="comp") head.appendChild(el("div","testbadge",`🎯 TEST · wk ${state.cycle.testWeek}`));
     card.appendChild(head); wk+=b.lengthWk;
     const r=b.budget.ratio;
     card.appendChild(el("div","ratio",`ME ${Math.round(r.ME*100)} · DE ${Math.round(r.DE*100)} · RE ${Math.round(r.RE*100)}  →  exposures ME${b.budget.exposures.ME} DE${b.budget.exposures.DE} RE${b.budget.exposures.RE}`));
@@ -1418,7 +1430,7 @@ function renderToday(){
   const ctl=el("div","today-ctl"); ctl.id="todayctl";
   const blockOpts=state.plan.blocks.map(b=>`<option value="${b.index}">Block ${b.index} — ${b.phase}</option>`).join("");
   const realz=state.plan.blocks.find(b=>b.phase==="realizational");
-  const testOpt=(state.cycle.testWeek!=null&&realz)?`<option value="test">🎯 Test day · wk ${state.cycle.testWeek}</option>`:"";
+  const testOpt=(state.cycle.testWeek!=null&&realz&&state.planBy!=="comp")?`<option value="test">🎯 Test day · wk ${state.cycle.testWeek}</option>`:"";
   const compOpt=state.compDate?`<option value="comp">🏆 Competition day</option>`:"";
   const dayOpts=Array.from({length:state.profile.daysPerWeek},(_,i)=>{const wd=weekdayDate(i); const dt=wd?(" \u00b7 "+wd.toLocaleDateString(undefined,{month:"short",day:"numeric"})):""; return '<option value="'+i+'">Day '+(i+1)+dt+'</option>';}).join("");
   ctl.innerHTML=`<div class="dsel"><div class="field"><label>Block</label><select id="tblock">${blockOpts}${testOpt}${compOpt}</select></div><div class="field"><label>Week</label><select id="tweek"></select></div><div class="field"><label>Training day</label><select id="tday">${dayOpts}</select></div></div>`;
@@ -1426,7 +1438,7 @@ function renderToday(){
   ctl.innerHTML+=mk("sleep","Sleep",4)+mk("energy","Energy / drive",4)+mk("sore_squat","Sore · legs/back",1)+mk("sore_bench","Sore · chest/shoulders",1)+mk("sore_deadlift","Sore · posterior chain",1);
   root.appendChild(ctl);
   [...$("#tday").options].forEach((o,i)=>{ const wd=weekdayDate(i); if(wd) o.textContent="Day "+(i+1)+" \u00b7 "+wd.toLocaleDateString(undefined,{month:"short",day:"numeric"}); });
-  { const cur=currentBlockWeek(); if(state.plan.blocks[cur.block]) $("#tblock").value=String(cur.block); populateWeeks(); const tw=$("#tweek"); if(tw&&!tw.disabled){ const cb=state.plan.blocks[+$("#tblock").value]; tw.value=String(Math.min(cur.week,(cb?cb.lengthWk:1)-1)); } }
+  { const cur=currentBlockWeek(); if(state.plan.blocks[cur.block]) $("#tblock").value=String(cur.block); populateWeeks(); const tw=$("#tweek"); if(tw&&!tw.disabled){ const cb=state.plan.blocks[+$("#tblock").value]; tw.value=String(Math.min(cur.week,(cb?cb.lengthWk:1)-1)); } populateDays(); }
   const out=el("div"); out.id="todayout"; root.appendChild(out);
   const recompute=()=>{
     ["sleep","energy","sore_squat","sore_bench","sore_deadlift"].forEach(id=>{const e=$("#"+id);if(e)$("#"+id+"v").textContent=e.value;});
@@ -1444,21 +1456,17 @@ function renderToday(){
     const lastDone=(bi,g,d)=>{const t=state.log.filter(s=>{ if(s.block!==bi||s.day!==d) return false; let sg=s.gw; if(sg==null){ sg=0; for(let i=0;i<s.block;i++) sg+=(state.plan.blocks[i].lengthWk||1); } return sg===g; }).map(s=>s.ts||0); return t.length?Math.max(...t):null;};
     const doneRecently=(bi,g,d)=>lastDone(bi,g,d)!=null;
     const fmtWhen=(ts)=>{const a=new Date(ts), n=new Date(); const days=Math.round((new Date(n.toDateString())-new Date(a.toDateString()))/86400000); return days<=0?"today":days===1?"yesterday":days<7?a.toLocaleDateString(undefined,{weekday:"short"}):a.toLocaleDateString(undefined,{month:"short",day:"numeric"});};
-    {const ts=$("#tday"); for(let d=0;d<ts.options.length;d++){const wd=weekdayDateFor(d,gw); const dt=wd?" \u00b7 "+wd.toLocaleDateString(undefined,{month:"short",day:"numeric"}):""; ts.options[d].text=`Day ${d+1}`+dt+(doneRecently(b.index,gw,d)?"  \u2713":"");}}
+    {const ts=$("#tday"); const wdz=weekDays(gw); for(let d=0;d<ts.options.length;d++){ if(!wdz[d]) continue; const wd=addDaysD(cycleStartMon(),gw*7+wdz[d].offset); const dt=" \u00b7 "+wd.toLocaleDateString(undefined,{month:"short",day:"numeric"}); const lab=wdz[d].meet?"Meet day":wdz[d].lift?(LAB2[wdz[d].lift]+" (taper)"):("Day "+(d+1)); ts.options[d].text=lab+dt+(doneRecently(b.index,gw,d)?"  \u2713":"");}}
     const zones={}; b.prescriptions.forEach(p=>zones[p.method]=p.zone);
     const mod=(zone,lift)=>{const m=ZK.modulate(zone,band,check.soreness[lift]);return {zone:m.zone,down:m.downRegulated};};
     const GYM=["barbell","rack","dumbbell","cable","bench","bodyweight","machine"];
     const deload=!!state.deloadWeek && !taperActive && state.deloadWeek===isoLocal(addDaysD(cycleStartMon(),gw*7));
-    const day=(ZK.buildFullWeek(zones,b.budget.exposures,effMaxes(),kit().plates,kit().bar,b.phase,b.index,GYM,state.speed,state.speedOrder,mod,(band==="red")||deload,state.profile.daysPerWeek,state.freqPriority,wib,deload)[di])||[];
-    let taperRx=null, taperRest=null;
-    if(taperActive){ const mi=day.find(x=>x.group==="main");
-      if(mi){ const tp=ZK.taperMainPrescription(mi.lift,dayOut,effMaxOf(mi.lift));
-        if(tp.inTaper){ taperRx=tp;
-          if(tp.drop){ taperRest={lift:mi.lift,label:tp.label}; day.length=0; }
-          else { mi.sets=tp.sets; mi.reps=String(tp.reps); mi.load=tp.load; mi.cue=tp.label; mi.taperWeek=tp.taperWeek;
-            for(let j=day.length-1;j>=0;j--){ if(day[j].group==="speed") day.splice(j,1); }
-            const keep=tp.taperWeek===-2?2:tp.taperWeek===-1?1:0, ai=[]; day.forEach((x,j)=>{ if(x.group==="accessory"||x.group==="core") ai.push(j); });
-            ai.slice(keep).sort((a,b)=>b-a).forEach(j=>day.splice(j,1)); } } } }
+    const _wsel=weekDays(gw), wdi=_wsel[di]||null; let taperRx=null, taperRest=null; const meetDay=!!(wdi&&wdi.meet); let day;
+    if(meetDay){ day=[]; }
+    else if(wdi&&wdi.lift&&taperActive){ const _lf=wdi.lift, _do=wdi.daysOut; const tp=ZK.taperMainPrescription(_lf,_do,effMaxOf(_lf)); taperRx=tp;
+      if(tp.drop){ taperRest={lift:_lf}; day=[]; }
+      else { const mv=(ZK.MAIN_MOVEMENTS||[]).find(m=>m.lift===_lf&&m.specificity===1)||{name:LAB2[_lf]}; day=[{group:"main",lift:_lf,name:mv.name,sets:tp.sets,reps:String(tp.reps),load:tp.load,cue:tp.label,method:"ME",rest:"180s"}]; } }
+    else { day=(ZK.buildFullWeek(zones,b.budget.exposures,effMaxes(),kit().plates,kit().bar,b.phase,b.index,GYM,state.speed,state.speedOrder,mod,(band==="red")||deload,state.profile.daysPerWeek,state.freqPriority,wib,deload)[di])||[]; }
     // apply on-the-fly exercise swaps (per block+day+slot), recomputing load for main swaps
     day.forEach((it,idx)=>{
       const ov=state.swaps[`${b.index}|${di}|${idx}`]; if(!ov) return;
@@ -1472,6 +1480,7 @@ function renderToday(){
       it.load=Math.round(toUnit(pn.load,pn.unit||state.unit,state.unit));  // your pinned load, in the current unit
       it.pinned=true; });
     const o=$("#todayout"); o.innerHTML="";
+    if(meetDay){ renderCompDay(o); return; }
     if(deload){ const bn=el("div","fatbanner deloading"); bn.innerHTML="<b>Deload week active.</b> Volume and load are reduced to shed fatigue; your maxes are held. "; const cb=el("button","fatbtn ghost"); cb.textContent="Cancel deload"; cb.addEventListener("click",cancelDeload); bn.appendChild(cb); o.appendChild(bn); }
     else if(!taperActive) { const fw=computeFatigue(); if(fw&&fw.recommendDeload){ const bn=el("div","fatbanner"); bn.innerHTML="<b>\u26a0 Fatigue elevated \u2014 consider a deload.</b> "+fw.reasons.join(" \u00b7 ")+" "; const db=el("button","fatbtn"); db.textContent="Take a deload week"; db.addEventListener("click",takeDeload); bn.appendChild(db); o.appendChild(bn); } }
     if(taperActive){ const wl=taperRx?(taperRx.taperWeek===0?"Meet week":taperRx.taperWeek===-1?"Taper \u00b7 Week -1":"Taper \u00b7 Week -2"):"Taper";
@@ -1622,8 +1631,8 @@ function renderToday(){
     }
   }
   ctl.addEventListener("input",recompute);
-  $("#tblock").addEventListener("change",()=>{ populateWeeks(); recompute(); });
-  $("#tweek").addEventListener("change",recompute);
+  $("#tblock").addEventListener("change",()=>{ populateWeeks(); populateDays(); recompute(); });
+  $("#tweek").addEventListener("change",()=>{ populateDays(); recompute(); });
   $("#tday").addEventListener("change",recompute);
   recompute();
 }
@@ -1772,12 +1781,12 @@ function renderCompDay(o){
   const sc=el("div","score comp"); sc.innerHTML='<div class="num">🏆</div><div class="band">comp</div><div class="desc">Competition '+when+(state.compDate?" ("+fmtCompDate(0)+")":"")+'. Sharpen by cutting volume into the date, then rehearse openers and attempts. This is separate from the internal test week.</div>'; o.appendChild(sc);
   o.appendChild(el("div","dayhdr","Competition prep · taper & attempts"));
   if(state.compDate){
-    const tl=el("div","taperline"); tl.appendChild(el("div","loghdr","Taper into the date — a guide (ours)"));
-    [[10,"Last heavier session — reduced volume (~3×2 @ 85%). Bank fitness, start shedding fatigue."],
-     [6,"Openers only — a couple of crisp singles at ~90%. Low volume, full rest between."],
-     [3,"Light & technical, or rest. Nothing taxing."],
-     [1,"Rest. Eat, sleep, stay loose."],
-     [0,"Compete — opener, second, third (below)."]].forEach(st=>{const row=el("div","taperrow"); row.innerHTML='<span class="tdate">'+fmtCompDate(st[0])+'</span><span class="tdo">'+st[1]+'</span>'; tl.appendChild(row);});
+    const tl=el("div","taperline"); tl.appendChild(el("div","loghdr","Taper schedule \u2014 reverse-counted from the meet (ours)"));
+    const _plan=(ZK.taperPlan?ZK.taperPlan():[]).slice().sort((a,b)=>b.daysOut-a.daysOut);
+    _plan.forEach(se=>{ const tp=ZK.taperMainPrescription(se.lift,se.daysOut,effMaxOf(se.lift)); const row=el("div","taperrow");
+      row.innerHTML='<span class="tdate">'+fmtCompDate(se.daysOut)+'</span><span class="tdo"><b>'+LAB2[se.lift]+'</b> '+(tp.drop?"rest":tp.sets+"\u00d7"+tp.reps+" @ "+tp.load+" "+U)+' \u2014 '+tp.label+' <span class="tdd">('+se.daysOut+'d out)</span></span>'; tl.appendChild(row); });
+    const rrow=el("div","taperrow"); rrow.innerHTML='<span class="tdate">'+fmtCompDate(2)+'</span><span class="tdo">Rest \u2014 eat, sleep, stay loose <span class="tdd">(final 2\u20133 days)</span></span>'; tl.appendChild(rrow);
+    const mrow=el("div","taperrow"); mrow.innerHTML='<span class="tdate">'+fmtCompDate(0)+'</span><span class="tdo"><b>Compete</b> \u2014 opener, second, third (below)</span>'; tl.appendChild(mrow);
     o.appendChild(tl);
   } else o.appendChild(el("div","pnote","Set a competition date in Setup to see the day-counted taper."));
   const ATT=[["Opener",0.91],["Second",0.97],["Third",1.03]];
@@ -1847,7 +1856,20 @@ function isoLocal(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart
 function parseISO(s){ if(!s) return null; const p=s.split("-").map(Number); if(p.length!==3||p.some(isNaN)) return null; return new Date(p[0],p[1]-1,p[2]); }
 function cycleStartMon(){ return parseISO(state.cycleStart) || mondayThisWeek(); }
 function weekdayDate(di){ if(!state.trainingDays||state.trainingDays[di]==null) return null; return addDaysD(mondayThisWeek(), state.trainingDays[di]); }
-function weekdayDateFor(di,gw){ if(!state.trainingDays||state.trainingDays[di]==null) return null; return addDaysD(cycleStartMon(), (gw||0)*7 + state.trainingDays[di]); }
+const LAB2={squat:"Squat",bench:"Bench",deadlift:"Deadlift"};
+function dayDone(bi,g,d){ return state.log.some(s=>{ if(s.block!==bi||s.day!==d) return false; let sg=s.gw; if(sg==null){ sg=0; for(let i=0;i<s.block;i++) sg+=(state.plan.blocks[i].lengthWk||1); } return sg===g; }); }
+function isTaperWeek(gw){ const c=compDateObj(); if(!c) return false; const wm=addDaysD(cycleStartMon(),gw*7), we=addDaysD(wm,6); const oEnd=Math.round((c-wm)/86400000), oStart=Math.round((c-we)/86400000); return oEnd>=0 && oStart<=14; }
+function taperDaysForWeek(gw){ const c=compDateObj(); if(!c) return null; const wm=addDaysD(cycleStartMon(),gw*7); const out=[];
+  (ZK.taperPlan?ZK.taperPlan():[]).forEach(se=>{ const dt=addDaysD(c,-se.daysOut); const off=Math.round((dt-wm)/86400000); if(off>=0&&off<=6) out.push({offset:off,lift:se.lift,daysOut:se.daysOut,taper:true}); });
+  const moff=Math.round((c-wm)/86400000); if(moff>=0&&moff<=6) out.push({offset:moff,meet:true,daysOut:0});
+  out.sort((a,b)=>a.offset-b.offset); return out; }
+function weekDays(gw){ if(isTaperWeek(gw)) return taperDaysForWeek(gw)||[]; return (state.trainingDays||[0,2,4]).slice(0,state.profile.daysPerWeek).map(o=>({offset:o})); }
+function weekdayDateFor(di,gw){ const wd=weekDays(gw); if(!wd||!wd[di]) return null; return addDaysD(cycleStartMon(), (gw||0)*7 + wd[di].offset); }
+function populateDays(){ const sel=$("#tday"); if(!sel) return; const bi=+$("#tblock").value; if(!state.plan||!state.plan.blocks[bi]) return;
+  let gw=0; for(let i=0;i<bi;i++) gw+=(state.plan.blocks[i].lengthWk||1); gw+=(+($("#tweek")&&$("#tweek").value||0)||0);
+  const wd=weekDays(gw), prev=+(sel.value||0);
+  sel.innerHTML=wd.map((d,i)=>{ const date=addDaysD(cycleStartMon(),gw*7+d.offset); const dt=" \u00b7 "+date.toLocaleDateString(undefined,{month:"short",day:"numeric"}); const lab=d.meet?"Meet day":d.lift?(LAB2[d.lift]+" (taper)"):("Day "+(i+1)); return '<option value="'+i+'">'+lab+dt+(dayDone(bi,gw,i)?"  \u2713":"")+'</option>'; }).join("");
+  sel.value=String(Math.max(0,Math.min(prev,wd.length-1))); }
 function currentBlockWeek(){ const bl=(state.plan&&state.plan.blocks)||[]; if(!bl.length) return {block:0,week:0};
   const w=Math.max(0,Math.round((mondayThisWeek()-cycleStartMon())/(7*86400000))); let acc=0;
   for(let i=0;i<bl.length;i++){ const L=bl[i].lengthWk||1; if(w<acc+L) return {block:i,week:w-acc}; acc+=L; }
@@ -1974,10 +1996,12 @@ function renderSchedule(){
     for(let i=0;i<b.lengthWk;i++,wk++){
       const wsec=el("div","wsec");
       wsec.appendChild(el("div","whd","Week "+wk+" \u00b7 "+b.phase+(b.phase==="realizational"?" \u00b7 peak/taper":"")));
-      useDays.forEach((d,di)=>{
-        const date=addDaysD(mon0,(wk-1)*7+d), dIso=isoLocal(date);
-        const focus=mains[di]?(" \u00b7 "+mains[di]):"", done=loggedDates.has(dIso), isToday=dIso===todayIso;
-        const row=el("div","schrow tappable"+(done?" done":"")+(isToday?" today":"")); row.innerHTML='<span class="sdate">'+fmtSchedDate(date)+'</span><span class="sday">Day '+(di+1)+focus+'</span>'+(done?'<span class="schk">\u2713</span>':isToday?'<span class="schtoday">today</span>':'<span class="schgo">\u203a</span>');
+      const _gw=wk-1, _wd=weekDays(_gw);
+      _wd.forEach((dd,di)=>{
+        const date=addDaysD(mon0,_gw*7+dd.offset), dIso=isoLocal(date);
+        const lab=dd.meet?"\ud83c\udfc6 Meet day":dd.lift?(LAB2[dd.lift]+" \u00b7 taper"):("Day "+(di+1)+(mains[di]?" \u00b7 "+mains[di]:""));
+        const done=loggedDates.has(dIso), isToday=dIso===todayIso;
+        const row=el("div","schrow tappable"+(done?" done":"")+(isToday?" today":"")+(dd.taper||dd.meet?" tapered":"")); row.innerHTML='<span class="sdate">'+fmtSchedDate(date)+'</span><span class="sday">'+lab+'</span>'+(done?'<span class="schk">\u2713</span>':isToday?'<span class="schtoday">today</span>':'<span class="schgo">\u203a</span>');
         row.addEventListener("click",()=>openDay(bIdx,i,di));
         wsec.appendChild(row);
       });
