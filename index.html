@@ -215,6 +215,8 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-ra
 .fatbtn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
 .fatbanner{border:1px solid var(--accent);background:rgba(255,90,44,.07);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--text)}
 .fatbanner.deloading{border-color:var(--line);background:var(--surface2)}
+.fatbanner.taper{border-color:#e0a92e;background:rgba(224,169,46,.08);color:var(--text)}
+.restday{border:1px dashed var(--line);border-radius:10px;padding:16px;margin-bottom:14px;font-size:13px;color:var(--muted);text-align:center}
 .arpanel{border:1px solid var(--line);border-radius:10px;padding:12px 13px;margin:0 0 14px}
 .arhd{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
 .arrow{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:2px}
@@ -718,6 +720,7 @@ var _ZK = (() => {
     const detail = `RPE ${args.loggedRPE} on ${args.topLoad}\xD7${args.topReps}, expected ~${expected.toFixed(1)}`;
     if (Math.abs(signal) < cfg.deadband) return hold(`on target (${detail})`);
     const dir = signal > 0 ? 1 : -1;
+    if (args.taperActive && dir > 0) return hold(`taper active \u2014 readiness is up but capacity isn\u2019t; load held (${detail})`);
     if (dir > 0) {
       const confirmed = args.e1rmRecent != null && args.e1rmPrior != null && args.e1rmRecent >= args.e1rmPrior;
       if (!confirmed) return hold(`graded easy (${detail}) but e1RM hasn't confirmed \u2014 holding`);
@@ -1161,6 +1164,41 @@ var _ZK = (() => {
     if (twoForTwo) return { recWeight: lastW + increment, bumped: true, region, increment, reason: `${goal}+ reps twice at ${lastW} \u2192 +${increment}` };
     return { recWeight: lastW, bumped: false, region, increment, reason: `hold at ${lastW}` };
   }
+  var round5 = (x) => Math.round(x / 5) * 5;
+  function taperMainPrescription(lift, daysOut, workingMax) {
+    if (daysOut == null || daysOut < 0 || daysOut > 14) return { inTaper: false, drop: false, sets: 0, reps: 0, load: 0, label: "", taperWeek: 99 };
+    const taperWeek = daysOut >= 8 ? -2 : daysOut >= 5 ? -1 : 0;
+    let mode;
+    if (daysOut <= 3) mode = "drop";
+    else if (lift === "deadlift") mode = daysOut >= 10 ? "heavy" : "drop";
+    else if (lift === "squat") mode = daysOut >= 7 ? "heavy" : "light";
+    else mode = daysOut >= 6 ? "moderate" : "primer";
+    if (mode === "drop") return { inTaper: true, drop: true, sets: 0, reps: 0, load: 0, label: "rest \u2014 peaking", taperWeek };
+    let sets, reps, pct, label;
+    if (mode === "heavy") {
+      sets = taperWeek === -2 ? 2 : 1;
+      reps = 1;
+      pct = 1;
+      label = "last heavy \u2014 crisp top single, no grind";
+    } else if (mode === "moderate") {
+      sets = taperWeek === -2 ? 3 : 2;
+      reps = 2;
+      pct = 0.85;
+      label = "crisp submaximal \u2014 stay sharp";
+    } else if (mode === "light") {
+      sets = 3;
+      reps = 3;
+      pct = 0.72;
+      label = "speed / technique only";
+    } else {
+      sets = 1;
+      reps = 1;
+      pct = 0.95;
+      label = "opener primer \u2014 one single";
+    }
+    const ceiling = taperWeek === 0 ? 0.95 : 1;
+    return { inTaper: true, drop: false, sets, reps, load: round5(Math.min(pct, ceiling) * workingMax), label, taperWeek };
+  }
   function buildFullWeek(zones, exposures, e1rms, inv, bar, phase, blockIndex, available, speedWork = false, speedOrder = "before", mod, trimAccessories = false, daysPerWeek = 3, freqPriority = "bench", weekInBlock = 0, deload = false) {
     const emphasis = mainMethod(phase, zones, exposures);
     const secondary = emphasis === "ME" ? "RE" : "ME";
@@ -1257,6 +1295,7 @@ var _ZK = (() => {
     expand,
     buildFullWeek,
     accessoryProgression,
+    taperMainPrescription,
     selectAccessories,
     selectMain,
     MAIN_MOVEMENTS,
@@ -1398,6 +1437,7 @@ function renderToday(){
     const b=state.plan.blocks[+$("#tblock").value], di=+$("#tday").value;
     const wib=$("#tweek")?(+$("#tweek").value||0):0;
     let gw=0; for(let i=0;i<b.index;i++) gw+=(state.plan.blocks[i].lengthWk||1); gw+=wib;
+    const _compD=compDateObj(), _tdd=weekdayDateFor(di,gw); const dayOut=(_compD&&_tdd)?Math.round((_compD-_tdd)/86400000):null; const taperActive=dayOut!=null&&dayOut>=0&&dayOut<=14;
     // completion persists for a rolling week (so you can open it tomorrow and still see it),
     // keyed on block+day+time — independent of the date-scoped save id.
     const WEEK=7*86400000;
@@ -1408,8 +1448,17 @@ function renderToday(){
     const zones={}; b.prescriptions.forEach(p=>zones[p.method]=p.zone);
     const mod=(zone,lift)=>{const m=ZK.modulate(zone,band,check.soreness[lift]);return {zone:m.zone,down:m.downRegulated};};
     const GYM=["barbell","rack","dumbbell","cable","bench","bodyweight","machine"];
-    const deload=!!state.deloadWeek && state.deloadWeek===isoLocal(addDaysD(cycleStartMon(),gw*7));
+    const deload=!!state.deloadWeek && !taperActive && state.deloadWeek===isoLocal(addDaysD(cycleStartMon(),gw*7));
     const day=(ZK.buildFullWeek(zones,b.budget.exposures,effMaxes(),kit().plates,kit().bar,b.phase,b.index,GYM,state.speed,state.speedOrder,mod,(band==="red")||deload,state.profile.daysPerWeek,state.freqPriority,wib,deload)[di])||[];
+    let taperRx=null, taperRest=null;
+    if(taperActive){ const mi=day.find(x=>x.group==="main");
+      if(mi){ const tp=ZK.taperMainPrescription(mi.lift,dayOut,effMaxOf(mi.lift));
+        if(tp.inTaper){ taperRx=tp;
+          if(tp.drop){ taperRest={lift:mi.lift,label:tp.label}; day.length=0; }
+          else { mi.sets=tp.sets; mi.reps=String(tp.reps); mi.load=tp.load; mi.cue=tp.label; mi.taperWeek=tp.taperWeek;
+            for(let j=day.length-1;j>=0;j--){ if(day[j].group==="speed") day.splice(j,1); }
+            const keep=tp.taperWeek===-2?2:tp.taperWeek===-1?1:0, ai=[]; day.forEach((x,j)=>{ if(x.group==="accessory"||x.group==="core") ai.push(j); });
+            ai.slice(keep).sort((a,b)=>b-a).forEach(j=>day.splice(j,1)); } } } }
     // apply on-the-fly exercise swaps (per block+day+slot), recomputing load for main swaps
     day.forEach((it,idx)=>{
       const ov=state.swaps[`${b.index}|${di}|${idx}`]; if(!ov) return;
@@ -1424,13 +1473,16 @@ function renderToday(){
       it.pinned=true; });
     const o=$("#todayout"); o.innerHTML="";
     if(deload){ const bn=el("div","fatbanner deloading"); bn.innerHTML="<b>Deload week active.</b> Volume and load are reduced to shed fatigue; your maxes are held. "; const cb=el("button","fatbtn ghost"); cb.textContent="Cancel deload"; cb.addEventListener("click",cancelDeload); bn.appendChild(cb); o.appendChild(bn); }
-    else { const fw=computeFatigue(); if(fw&&fw.recommendDeload){ const bn=el("div","fatbanner"); bn.innerHTML="<b>\u26a0 Fatigue elevated \u2014 consider a deload.</b> "+fw.reasons.join(" \u00b7 ")+" "; const db=el("button","fatbtn"); db.textContent="Take a deload week"; db.addEventListener("click",takeDeload); bn.appendChild(db); o.appendChild(bn); } }
+    else if(!taperActive) { const fw=computeFatigue(); if(fw&&fw.recommendDeload){ const bn=el("div","fatbanner"); bn.innerHTML="<b>\u26a0 Fatigue elevated \u2014 consider a deload.</b> "+fw.reasons.join(" \u00b7 ")+" "; const db=el("button","fatbtn"); db.textContent="Take a deload week"; db.addEventListener("click",takeDeload); bn.appendChild(db); o.appendChild(bn); } }
+    if(taperActive){ const wl=taperRx?(taperRx.taperWeek===0?"Meet week":taperRx.taperWeek===-1?"Taper \u00b7 Week -1":"Taper \u00b7 Week -2"):"Taper";
+      const bn=el("div","fatbanner taper"); bn.innerHTML="<b>\ud83c\udfaf "+wl+" \u2014 peaking, "+dayOut+" days out.</b> Fitness holds while fatigue clears \u2014 no load increases, deloads paused. "+(taperRx&&!taperRx.drop?taperRx.label:""); o.appendChild(bn); }
     renderAutoReg(o);
     const desc={green:"Train as planned. Readiness only protects — never adds load.",amber:"Heavy work backs off a zone. Still a productive day.",red:"Cut the intensity. A red day is information, not failure."}[band];
     const sc=el("div","score "+band); sc.innerHTML=`<div class="num">${score}</div><div class="band">${band}</div><div class="desc">${desc}</div>`; o.appendChild(sc);
     const ld=lastDone(b.index,gw,di);
     const _wd=weekdayDateFor(di,gw), _ds=_wd?_wd.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"}):"";
-    o.appendChild(el("div","dayhdr",`Day ${di+1}${_ds?` · ${_ds}`:""} · ${day.length} exercises · ${b.phase}${b.lengthWk>1?` \u00b7 Week ${wib+1} of ${b.lengthWk}`:""}${deload?` \u00b7 Deload week`:""}${ld!=null?` <span class="donebadge">✓ done ${fmtWhen(ld)}</span>`:""}`));
+    o.appendChild(el("div","dayhdr",`Day ${di+1}${_ds?` · ${_ds}`:""} · ${day.length} exercises · ${b.phase}${b.lengthWk>1?` \u00b7 Week ${wib+1} of ${b.lengthWk}`:""}${deload?` \u00b7 Deload week`:""}${taperActive?` \u00b7 taper`:""}${ld!=null?` <span class="donebadge">✓ done ${fmtWhen(ld)}</span>`:""}`));
+    if(taperRest){ const rc=el("div","restday"); rc.innerHTML="\ud83d\udca4 <b>Rest day</b> \u2014 peaking for the meet. No training today; prioritize sleep, food, and light mobility."; o.appendChild(rc); }
     let lastGroup="";
     day.forEach((e,idx)=>{
       if(e.group!==lastGroup){lastGroup=e.group;const lab={speed:"Speed work",main:"Main lift",accessory:"Accessory work",core:"Core & midline"}[e.group];o.appendChild(el("div","tierlab",lab));}
@@ -1834,6 +1886,7 @@ function runAutoReg(sid,snap){ ensureAutoReg(); if(state.autoRegOn===false||!ZK.
   const conv=logsIn(state.unit), now=Date.now(), D=86400000, ML=["squat","bench","deadlift"];
   const gw=(snap&&snap.gw)||0; const deloadWk=!!state.deloadWeek && state.deloadWeek===isoLocal(addDaysD(cycleStartMon(),gw*7));
   const downReg=(snap&&snap.band)==="red"; const sessSets=conv.filter(s=>s.sessionId===sid);
+  const _cd=compDateObj(), _sdd=weekdayDateFor((snap&&snap.di)||0,gw); const _sdo=(_cd&&_sdd)?Math.round((_cd-_sdd)/86400000):null; const taperActive=_sdo!=null&&_sdo>=0&&_sdo<=14;
   const win=(lo,hi,l)=>{ const a=now-hi*D,b=now-lo*D; return ZK.e1rmFromHistory(conv.filter(s=>(s.ts||0)>a&&(s.ts||0)<=b),l); };
   const notes=[];
   ML.forEach(l=>{
@@ -1841,7 +1894,7 @@ function runAutoReg(sid,snap){ ensureAutoReg(); if(state.autoRegOn===false||!ZK.
     if(!heavy.length) return;
     const top=heavy.reduce((a,b)=>(b.load>a.load||(b.load===a.load&&b.rpe>a.rpe))?b:a);
     const res=ZK.autoRegStep({ topLoad:top.load, topReps:top.reps, loggedRPE:top.rpe, effMax:effMaxOf(l),
-      e1rmRecent:win(0,14,l), e1rmPrior:win(14,28,l), deload:deloadWk, downRegulated:downReg, currentAdj:state.autoReg[l].adj });
+      e1rmRecent:win(0,14,l), e1rmPrior:win(14,28,l), deload:deloadWk, downRegulated:downReg, currentAdj:state.autoReg[l].adj, taperActive });
     if(res.status==="up"||res.status==="down"){ state.autoReg[l]={adj:res.newAdj,ts:now,note:res.reason}; notes.push({lift:l,status:res.status,reason:res.reason}); }
     else if(res.status==="hold"){ notes.push({lift:l,status:"hold",reason:res.reason}); }
   });
