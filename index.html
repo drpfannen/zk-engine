@@ -1169,46 +1169,35 @@ var _ZK = (() => {
   var round5 = (x) => Math.round(x / 5) * 5;
   function taperPlan() {
     return [
-      { daysOut: 12, lift: "deadlift" },
-      { daysOut: 10, lift: "squat" },
-      { daysOut: 8, lift: "bench" },
-      { daysOut: 6, lift: "squat" },
-      { daysOut: 4, lift: "bench" }
+      { daysOut: 10, lift: "deadlift" },
+      // final heavy >85% 1RM; deadlift clears earliest (longest cessation)
+      { daysOut: 8, lift: "squat" },
+      // final heavy >85% 1RM (squat 7-10d out)
+      { daysOut: 6, lift: "bench" },
+      // final heavy (bench <7d out)
+      { daysOut: 4, lift: "squat" },
+      // final light session ~75-80% 1RM
+      { daysOut: 3, lift: "bench" }
+      // final light session ~75-80% 1RM
     ];
   }
   function taperMainPrescription(lift, daysOut, workingMax) {
-    if (daysOut == null || daysOut < 0 || daysOut > 14) return { inTaper: false, drop: false, sets: 0, reps: 0, load: 0, label: "", taperWeek: 99 };
-    const taperWeek = daysOut >= 8 ? -2 : daysOut >= 5 ? -1 : 0;
-    let mode;
-    if (daysOut <= 3) mode = "drop";
-    else if (lift === "deadlift") mode = daysOut >= 10 ? "heavy" : "drop";
-    else if (lift === "squat") mode = daysOut >= 7 ? "heavy" : "light";
-    else mode = daysOut >= 6 ? "moderate" : "primer";
-    if (mode === "drop") return { inTaper: true, drop: true, sets: 0, reps: 0, load: 0, label: "rest \u2014 peaking", taperWeek };
+    if (daysOut == null || daysOut < 0 || daysOut > 10) return { inTaper: false, drop: false, sets: 0, reps: 0, load: 0, label: "", taperWeek: 99 };
+    const taperWeek = daysOut >= 8 ? -2 : daysOut >= 4 ? -1 : 0;
+    if (daysOut <= 2) return { inTaper: true, drop: true, sets: 0, reps: 0, load: 0, label: "cessation \u2014 complete rest (2-4 days)", taperWeek };
     let sets, reps, pct, label;
-    if (mode === "heavy") {
-      sets = taperWeek === -2 ? 2 : 1;
+    if (daysOut >= 5) {
+      sets = 2;
       reps = 1;
       pct = 1;
-      label = "last heavy \u2014 crisp top single, no grind";
-    } else if (mode === "moderate") {
-      sets = taperWeek === -2 ? 3 : 2;
-      reps = 2;
-      pct = 0.85;
-      label = "crisp submaximal \u2014 stay sharp";
-    } else if (mode === "light") {
-      sets = 3;
-      reps = 3;
-      pct = 0.72;
-      label = "speed / technique only";
+      label = "final heavy \u2014 top single ~90% 1RM (>85%), no grind";
     } else {
-      sets = 1;
-      reps = 1;
-      pct = 0.95;
-      label = "opener primer \u2014 one single";
+      pct = lift === "deadlift" ? 0.8 : 0.85;
+      sets = 2;
+      reps = 2;
+      label = "final session \u2014 light & crisp (~75-80% 1RM)";
     }
-    const ceiling = taperWeek === 0 ? 0.95 : 1;
-    return { inTaper: true, drop: false, sets, reps, load: round5(Math.min(pct, ceiling) * workingMax), label, taperWeek };
+    return { inTaper: true, drop: false, sets, reps, load: round5(pct * workingMax), label, taperWeek };
   }
   function buildFullWeek(zones, exposures, e1rms, inv, bar, phase, blockIndex, available, speedWork = false, speedOrder = "before", mod, trimAccessories = false, daysPerWeek = 3, freqPriority = "bench", weekInBlock = 0, deload = false) {
     const emphasis = mainMethod(phase, zones, exposures);
@@ -1449,7 +1438,7 @@ function renderToday(){
     const b=state.plan.blocks[+$("#tblock").value], di=+$("#tday").value;
     const wib=$("#tweek")?(+$("#tweek").value||0):0;
     let gw=0; for(let i=0;i<b.index;i++) gw+=(state.plan.blocks[i].lengthWk||1); gw+=wib;
-    const _compD=compDateObj(), _tdd=weekdayDateFor(di,gw); const dayOut=(_compD&&_tdd)?Math.round((_compD-_tdd)/86400000):null; const taperActive=dayOut!=null&&dayOut>=0&&dayOut<=14;
+    const _compD=compDateObj(), _tdd=weekdayDateFor(di,gw); const dayOut=(_compD&&_tdd)?Math.round((_compD-_tdd)/86400000):null; const taperActive=dayOut!=null&&dayOut>=0&&dayOut<=10;
     // completion persists for a rolling week (so you can open it tomorrow and still see it),
     // keyed on block+day+time — independent of the date-scoped save id.
     const WEEK=7*86400000;
@@ -1858,7 +1847,7 @@ function cycleStartMon(){ return parseISO(state.cycleStart) || mondayThisWeek();
 function weekdayDate(di){ if(!state.trainingDays||state.trainingDays[di]==null) return null; return addDaysD(mondayThisWeek(), state.trainingDays[di]); }
 const LAB2={squat:"Squat",bench:"Bench",deadlift:"Deadlift"};
 function dayDone(bi,g,d){ return state.log.some(s=>{ if(s.block!==bi||s.day!==d) return false; let sg=s.gw; if(sg==null){ sg=0; for(let i=0;i<s.block;i++) sg+=(state.plan.blocks[i].lengthWk||1); } return sg===g; }); }
-function isTaperWeek(gw){ const c=compDateObj(); if(!c) return false; const wm=addDaysD(cycleStartMon(),gw*7), we=addDaysD(wm,6); const oEnd=Math.round((c-wm)/86400000), oStart=Math.round((c-we)/86400000); return oEnd>=0 && oStart<=14; }
+function isTaperWeek(gw){ const t=taperDaysForWeek(gw); return !!(t&&t.length); }
 function taperDaysForWeek(gw){ const c=compDateObj(); if(!c) return null; const wm=addDaysD(cycleStartMon(),gw*7); const out=[];
   (ZK.taperPlan?ZK.taperPlan():[]).forEach(se=>{ const dt=addDaysD(c,-se.daysOut); const off=Math.round((dt-wm)/86400000); if(off>=0&&off<=6) out.push({offset:off,lift:se.lift,daysOut:se.daysOut,taper:true}); });
   const moff=Math.round((c-wm)/86400000); if(moff>=0&&moff<=6) out.push({offset:moff,meet:true,daysOut:0});
@@ -1908,7 +1897,7 @@ function runAutoReg(sid,snap){ ensureAutoReg(); if(state.autoRegOn===false||!ZK.
   const conv=logsIn(state.unit), now=Date.now(), D=86400000, ML=["squat","bench","deadlift"];
   const gw=(snap&&snap.gw)||0; const deloadWk=!!state.deloadWeek && state.deloadWeek===isoLocal(addDaysD(cycleStartMon(),gw*7));
   const downReg=(snap&&snap.band)==="red"; const sessSets=conv.filter(s=>s.sessionId===sid);
-  const _cd=compDateObj(), _sdd=weekdayDateFor((snap&&snap.di)||0,gw); const _sdo=(_cd&&_sdd)?Math.round((_cd-_sdd)/86400000):null; const taperActive=_sdo!=null&&_sdo>=0&&_sdo<=14;
+  const _cd=compDateObj(), _sdd=weekdayDateFor((snap&&snap.di)||0,gw); const _sdo=(_cd&&_sdd)?Math.round((_cd-_sdd)/86400000):null; const taperActive=_sdo!=null&&_sdo>=0&&_sdo<=10;
   const win=(lo,hi,l)=>{ const a=now-hi*D,b=now-lo*D; return ZK.e1rmFromHistory(conv.filter(s=>(s.ts||0)>a&&(s.ts||0)<=b),l); };
   const notes=[];
   ML.forEach(l=>{
@@ -1991,21 +1980,23 @@ function renderSchedule(){
   root.appendChild(el("div","pnote","Pick any date to re-map the whole plan \u2014 every week\u2019s sessions below shift to the new calendar. The date snaps to that week\u2019s Monday."));
   const loggedDates=new Set(state.log.map(x=>isoLocal(new Date(x.ts)))), todayIso=isoLocal(new Date());
   const mon0=cycleStartMon(); let wk=1;
+  let taperSec=null;   // taper weeks merge into ONE meet-relative countdown (no Monday-week splitting)
   state.plan.blocks.forEach((b,bIdx)=>{
     const mains=blockDayMains(b);
     for(let i=0;i<b.lengthWk;i++,wk++){
-      const wsec=el("div","wsec");
-      wsec.appendChild(el("div","whd","Week "+wk+" \u00b7 "+b.phase+(b.phase==="realizational"?" \u00b7 peak/taper":"")));
-      const _gw=wk-1, _wd=weekDays(_gw);
+      const _gw=wk-1, _wd=weekDays(_gw), _taper=isTaperWeek(_gw);
+      let host;
+      if(_taper){ if(!taperSec){ taperSec=el("div","wsec taperwk"); taperSec.appendChild(el("div","whd","\ud83c\udfaf Taper \u2014 counting down to the meet")); root.appendChild(taperSec); } host=taperSec; }
+      else { host=el("div","wsec"); host.appendChild(el("div","whd","Week "+wk+" \u00b7 "+b.phase+(b.phase==="realizational"?" \u00b7 peak":""))); root.appendChild(host); }
       _wd.forEach((dd,di)=>{
         const date=addDaysD(mon0,_gw*7+dd.offset), dIso=isoLocal(date);
-        const lab=dd.meet?"\ud83c\udfc6 Meet day":dd.lift?(LAB2[dd.lift]+" \u00b7 taper"):("Day "+(di+1)+(mains[di]?" \u00b7 "+mains[di]:""));
+        const dOut=Math.round((compDateObj()-date)/86400000);
+        const lab=dd.meet?"\ud83c\udfc6 Meet day":dd.lift?(LAB2[dd.lift]+" \u00b7 taper"+(isFinite(dOut)?" \u00b7 "+dOut+"d out":"")):("Day "+(di+1)+(mains[di]?" \u00b7 "+mains[di]:""));
         const done=loggedDates.has(dIso), isToday=dIso===todayIso;
         const row=el("div","schrow tappable"+(done?" done":"")+(isToday?" today":"")+(dd.taper||dd.meet?" tapered":"")); row.innerHTML='<span class="sdate">'+fmtSchedDate(date)+'</span><span class="sday">'+lab+'</span>'+(done?'<span class="schk">\u2713</span>':isToday?'<span class="schtoday">today</span>':'<span class="schgo">\u203a</span>');
         row.addEventListener("click",()=>openDay(bIdx,i,di));
-        wsec.appendChild(row);
+        host.appendChild(row);
       });
-      root.appendChild(wsec);
     }
   });
   if(cycleComplete()){ const bn=el("div","fatbanner"); bn.innerHTML="<b>Cycle complete.</b> Roll your maxes and emphasis into the next cycle. ";
