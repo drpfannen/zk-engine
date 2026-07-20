@@ -1347,7 +1347,9 @@ function loadStore(){try{const r=localStorage.getItem(STORE);return r?JSON.parse
 function saveAll(){try{localStorage.setItem(STORE,JSON.stringify({maxes:state.maxes,unit:state.unit,log:state.log,swaps:state.swaps,pins:state.pins,bands:state.bands,deloadWeek:state.deloadWeek,autoReg:state.autoReg,handoffDismissed:state.handoffDismissed,checklist:state.checklist,restBy:state.restBy,trainingDays:state.trainingDays,cycleStart:state.cycleStart,settings:{status:$("#status").value,planby:$("#planby").value,days:$("#days").value,weeks:$("#weeks").value,test:$("#test").value,compdate:$("#compdate").value,unit:$("#unit").value,speed:$("#speed").value,freq:$("#freq").value,autoreg:$("#autoreg")?$("#autoreg").value:"on",restset:$("#restset")?$("#restset").value:"120",restex:$("#restex")?$("#restex").value:"180",squat:$("#squat").value,bench:$("#bench").value,deadlift:$("#deadlift").value}}));}catch(e){state.storeOK=false;}}
 // ---- dual rest timer (ours): fixed bottom bar; auto-started on set/exercise completion; +15/-15 cumulative; skip ----
 const RestTimer=(function(){
-  let remaining=0, iv=null, kind="set", bar=null;
+  let remaining=0, iv=null, kind="set", bar=null, actx=null;
+  function audioCtx(){ try{ if(!actx){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return null; actx=new AC(); } if(actx.state==="suspended") actx.resume(); return actx; }catch(e){ return null; } }
+  function beep(){ const a=audioCtx(); if(!a) return; try{ const mk=(t0,f,d)=>{ const o=a.createOscillator(), g=a.createGain(); o.type="sine"; o.frequency.value=f; o.connect(g); g.connect(a.destination); g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.35,t0+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t0+d); o.start(t0); o.stop(t0+d+0.03); }; const n=a.currentTime; mk(n,880,0.15); mk(n+0.2,1175,0.2); }catch(e){} }   // two-tone rising chime on completion
   function bld(){ if(bar) return bar; bar=el("div","resttimer");
     bar.innerHTML='<div class="rt-label"></div><div class="rt-time">0:00</div><div class="rt-ctrls"><button class="rt-btn rt-minus" type="button">\u221215s</button><button class="rt-btn rt-plus" type="button">+15s</button><button class="rt-btn rt-skip" type="button">Skip</button></div>';
     document.body.appendChild(bar);
@@ -1358,10 +1360,10 @@ const RestTimer=(function(){
   function fmt(s){ s=Math.max(0,Math.round(s)); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
   function paint(){ const b=bld(); b.classList.remove("rt-done"); b.querySelector(".rt-time").textContent=fmt(remaining); b.querySelector(".rt-label").textContent=(kind==="exercise"?"Rest \u00b7 between exercises":"Rest \u00b7 between sets"); b.classList.add("show"); }
   function tick(){ remaining--; if(remaining<=0){ remaining=0; done(); } else paint(); }
-  function start(k,secs){ if(!(secs>0)) return; kind=k; remaining=secs; if(iv) clearInterval(iv); paint(); iv=setInterval(tick,1000); }
+  function start(k,secs){ if(!(secs>0)) return; audioCtx(); kind=k; remaining=secs; if(iv) clearInterval(iv); paint(); iv=setInterval(tick,1000); }
   function adj(d){ if(!bar||!bar.classList.contains("show")) return; remaining=Math.max(0,remaining+d); if(remaining<=0){ done(); } else paint(); }   // cumulative: each press shifts remaining by 15s
   function stop(){ if(iv){clearInterval(iv);iv=null;} remaining=0; if(bar) bar.classList.remove("show","rt-done"); }
-  function done(){ if(iv){clearInterval(iv);iv=null;} const b=bld(); b.classList.add("show","rt-done"); b.querySelector(".rt-time").textContent="Rest complete"; b.querySelector(".rt-label").textContent="\u2713 "+(kind==="exercise"?"next exercise":"next set"); try{navigator.vibrate&&navigator.vibrate(180);}catch(e){} setTimeout(function(){ if(remaining<=0&&bar) bar.classList.remove("show","rt-done"); },1600); }
+  function done(){ if(iv){clearInterval(iv);iv=null;} const b=bld(); b.classList.add("show","rt-done"); b.querySelector(".rt-time").textContent="Rest complete"; b.querySelector(".rt-label").textContent="\u2713 "+(kind==="exercise"?"next exercise":"next set"); beep(); try{navigator.vibrate&&navigator.vibrate(180);}catch(e){} setTimeout(function(){ if(remaining<=0&&bar) bar.classList.remove("show","rt-done"); },1600); }
   return { start:start, stop:stop, running:function(){return iv!=null;} };
 })();
 const toUnit=(load,from,to)=> from===to?load:(from==="lb"&&to==="kg"?load/LBKG:load*LBKG);
