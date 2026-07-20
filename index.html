@@ -183,6 +183,14 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-ra
 .logswap{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:5px;font-family:var(--mono);font-size:9px;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;margin-left:8px;cursor:pointer;vertical-align:middle}
 .logswap:hover{border-color:var(--accent);color:var(--accent)}
 .logswappanel{margin:6px 0 2px}
+.restcfg{display:flex;align-items:center;gap:8px;margin:3px 0 9px;font-family:var(--mono);font-size:10px;color:var(--muted)}
+.restcfglabel{letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.restfield{width:58px;background:var(--surface2);border:1px solid var(--line);color:var(--text);border-radius:5px;padding:4px 6px;font-family:var(--mono);font-size:11px}
+.restfield:focus{border-color:var(--accent);outline:none}
+.restmm{color:var(--muted);min-width:34px}
+.restreset{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:5px;font-size:11px;line-height:1;padding:2px 7px;cursor:pointer}
+.restreset:hover{border-color:var(--accent);color:var(--accent)}
+.restreset.off{visibility:hidden}
 .resttimer{position:fixed;left:0;right:0;bottom:0;z-index:60;display:none;align-items:center;gap:14px;justify-content:center;background:var(--surface2);border-top:2px solid var(--accent);padding:12px 16px;box-shadow:0 -4px 18px rgba(0,0,0,.34)}
 .resttimer.show{display:flex}
 .rt-label{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
@@ -1336,7 +1344,7 @@ const PCOL={45:"#2f5fae",35:"#c79a1e",25:"#2e8b50",20:"#2f5fae",15:"#c79a1e",10:
 const state={plan:null,maxes:{},unit:"lb",profile:{},cycle:{},log:[],swaps:{},pins:{},bands:[],deloadWeek:null,autoReg:{},autoRegOn:true,autoRegLast:null,handoffDismissed:null,storeOK:true};
 const STORE="zk_v1", LBKG=2.2046226;
 function loadStore(){try{const r=localStorage.getItem(STORE);return r?JSON.parse(r):null;}catch(e){state.storeOK=false;return null;}}
-function saveAll(){try{localStorage.setItem(STORE,JSON.stringify({maxes:state.maxes,unit:state.unit,log:state.log,swaps:state.swaps,pins:state.pins,bands:state.bands,deloadWeek:state.deloadWeek,autoReg:state.autoReg,handoffDismissed:state.handoffDismissed,checklist:state.checklist,trainingDays:state.trainingDays,cycleStart:state.cycleStart,settings:{status:$("#status").value,planby:$("#planby").value,days:$("#days").value,weeks:$("#weeks").value,test:$("#test").value,compdate:$("#compdate").value,unit:$("#unit").value,speed:$("#speed").value,freq:$("#freq").value,autoreg:$("#autoreg")?$("#autoreg").value:"on",restset:$("#restset")?$("#restset").value:"120",restex:$("#restex")?$("#restex").value:"180",squat:$("#squat").value,bench:$("#bench").value,deadlift:$("#deadlift").value}}));}catch(e){state.storeOK=false;}}
+function saveAll(){try{localStorage.setItem(STORE,JSON.stringify({maxes:state.maxes,unit:state.unit,log:state.log,swaps:state.swaps,pins:state.pins,bands:state.bands,deloadWeek:state.deloadWeek,autoReg:state.autoReg,handoffDismissed:state.handoffDismissed,checklist:state.checklist,restBy:state.restBy,trainingDays:state.trainingDays,cycleStart:state.cycleStart,settings:{status:$("#status").value,planby:$("#planby").value,days:$("#days").value,weeks:$("#weeks").value,test:$("#test").value,compdate:$("#compdate").value,unit:$("#unit").value,speed:$("#speed").value,freq:$("#freq").value,autoreg:$("#autoreg")?$("#autoreg").value:"on",restset:$("#restset")?$("#restset").value:"120",restex:$("#restex")?$("#restex").value:"180",squat:$("#squat").value,bench:$("#bench").value,deadlift:$("#deadlift").value}}));}catch(e){state.storeOK=false;}}
 // ---- dual rest timer (ours): fixed bottom bar; auto-started on set/exercise completion; +15/-15 cumulative; skip ----
 const RestTimer=(function(){
   let remaining=0, iv=null, kind="set", bar=null;
@@ -1388,6 +1396,16 @@ function applySwapToItem(it,alt){   // mutate a day item in place (used for live
   if(alt.type==="main"&&it.group==="main"){ const mv=ZK.MAIN_MOVEMENTS.find(m=>m.id===alt.id); if(mv){ it.name=mv.name; it.cue=mv.cue; it.swapped=true; if(it.zone!=null) it.load=ZK.roundToPlates(ZK.ZONE_PCT[it.zone]*effMaxOf(it.lift)*mv.loadFactor,kit().plates,kit().bar); } }
   else if(alt.type==="acc"&&(it.group==="accessory"||it.group==="core")){ const ac=ZK.ACCESSORIES.find(a=>a.id===alt.id); if(ac){ it.name=ac.name; it.sets=ac.sets; it.reps=ac.reps; it.rest=ac.restSec+"s"; it.cue=ac.cue; it.swapped=true; } }
 }
+// ---- per-exercise between-sets rest (ours): timer uses each exercise's own prescribed rest, overridable + persisted by exercise ----
+function mmss(s){ s=Math.max(0,Math.round(+s||0)); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
+function restToSecs(str){ if(str==null) return null; const s=String(str).toLowerCase().replace(/[\u2013\u2014]/g,"-");
+  let m=s.match(/(\d+)\s*-\s*(\d+)\s*min/); if(m) return (+m[1])*60;                    // "3-5 min" -> low end of the range
+  m=s.match(/(\d+(?:\.\d+)?)\s*min/); if(m) return Math.round((+m[1])*60);               // "3 min"
+  m=s.match(/(\d+)\s*s/); if(m) return +m[1];                                            // "90s"
+  m=s.match(/^\s*(\d+)\s*$/); if(m) return +m[1];                                        // bare seconds
+  return null; }
+function smartRest(it){ const p=restToSecs(it&&it.rest); return (p!=null)?p:(+(($("#restset")||{}).value)||120); }   // prescription, else global fallback
+function restForItem(it){ state.restBy=state.restBy||{}; const o=it&&state.restBy[it.name]; return (o!=null)?o:smartRest(it); }
 const loadFor=(z,l)=>ZK.prescribeLoad(z,state.maxes[l],kit().plates,kit().bar).roundedLoad;
 const ZONE_ORDER=["VH","H","M","L","VL","P"]; // most → least intense
 const meZone=b=>{ const p=b.prescriptions.find(p=>p.method==="ME"); if(p) return p.zone;
@@ -1624,6 +1642,8 @@ function renderToday(){
       const tgt=it.load!=null?`${it.sets}×${it.reps} @ ${it.load} ${state.unit}`:`${it.sets}×${it.reps}`;
       const _canSwap=(it.group==="main"||it.group==="accessory"||it.group==="core");
       html+=`<div class="logex" data-ex="${xi}"><div class="logexn"><input type="checkbox" class="exchk" data-ex="${xi}" title="mark whole exercise done">${it.name} <span class="logtgt">${tgt}</span><span class="exprog" data-ex="${xi}"></span>${_canSwap?` <button class="logswap" type="button" data-ex="${xi}" title="swap this exercise">\u21c4 swap</button>`:""}${accRec&&accRec.bumped?` <span class="bump" title="2-for-2 rule met">\u2191 +${accRec.increment} \u00b7 2\u00d72</span>`:""}</div>${_canSwap?`<div class="swappanel hidden logswappanel" data-ex="${xi}"></div>`:""}`;
+      if(it.sets>1){ const _rsec=restForItem(it), _ov=(state.restBy&&state.restBy[it.name]!=null);
+        html+=`<div class="restcfg"><span class="restcfglabel">rest / set</span><input class="restfield" type="number" min="0" step="15" data-ex="${xi}" value="${_rsec}"><span class="restmm" data-ex="${xi}">${mmss(_rsec)}</span><button class="restreset${_ov?"":" off"}" type="button" data-ex="${xi}" title="reset to smart default">\u21ba</button></div>`; }
       html+=`<div class="logrow loghd"><span></span><span class="logn">SET</span><span class="lprev">PREVIOUS</span><span class="lcol">${state.unit.toUpperCase()}</span><span class="lcol">REPS</span><span class="lcol">RPE</span></div>`;
       for(let i=0;i<it.sets;i++){
         const sv=itSaved[i];
@@ -1640,12 +1660,12 @@ function renderToday(){
     });
     lp.innerHTML=html; o.appendChild(lp);
     // ---- interactive checklist (ours): tick sets/exercises as completed. Each completion is the seam the rest timer hooks into. ----
-    function startRest(kind){ const rs=+(($("#restset")||{}).value)||120, re=+(($("#restex")||{}).value)||180; RestTimer.start(kind, kind==="exercise"?re:rs); }
+    function startRest(kind,xi){ if(kind==="exercise"){ RestTimer.start("exercise", +(($("#restex")||{}).value)||180); } else { RestTimer.start("set", restForItem(day[xi])); } }
     state.checklist=state.checklist||{}; const clk=state.checklist[sid]=state.checklist[sid]||{};
     const _k=(xi,i)=>xi+":"+i, _nsets=(xi)=>day[xi].sets;
     const _exDone=(xi)=>{ for(let i=0;i<_nsets(xi);i++) if(!clk[_k(xi,i)]) return false; return _nsets(xi)>0; };
     const _exUI=(xi)=>{ const ex=lp.querySelector('.logex[data-ex="'+xi+'"]'); if(!ex) return; let n=0; for(let i=0;i<_nsets(xi);i++) if(clk[_k(xi,i)]) n++; const p=ex.querySelector('.exprog'); if(p) p.textContent=n+"/"+_nsets(xi); const done=n===_nsets(xi)&&n>0; ex.classList.toggle("exdone",done); const c=ex.querySelector('.exchk'); if(c) c.checked=done; };
-    const _setChk=(xi,i,on,fire)=>{ const key=_k(xi,i), was=!!clk[key]; if(on) clk[key]=1; else delete clk[key]; const row=lp.querySelector('.logrow[data-ex="'+xi+'"][data-set="'+i+'"]'); if(row){ row.classList.toggle("checked",!!on); const cb=row.querySelector('.setchk'); if(cb) cb.checked=!!on; } _exUI(xi); if(on&&!was&&fire) startRest(_exDone(xi)?"exercise":"set"); saveAll(); };
+    const _setChk=(xi,i,on,fire)=>{ const key=_k(xi,i), was=!!clk[key]; if(on) clk[key]=1; else delete clk[key]; const row=lp.querySelector('.logrow[data-ex="'+xi+'"][data-set="'+i+'"]'); if(row){ row.classList.toggle("checked",!!on); const cb=row.querySelector('.setchk'); if(cb) cb.checked=!!on; } _exUI(xi); if(on&&!was&&fire) startRest(_exDone(xi)?"exercise":"set", xi); saveAll(); };
     day.forEach((it,xi)=>{ for(let i=0;i<it.sets;i++){ if(clk[_k(xi,i)]){ const row=lp.querySelector('.logrow[data-ex="'+xi+'"][data-set="'+i+'"]'); if(row){ row.classList.add("checked"); const cb=row.querySelector('.setchk'); if(cb) cb.checked=true; } } } _exUI(xi); });
     lp.querySelectorAll('.setchk').forEach(cb=>cb.addEventListener("change",()=>{ _setChk(+cb.getAttribute("data-ex"),+cb.getAttribute("data-set"),cb.checked,true); }));
     lp.querySelectorAll('.exchk').forEach(cb=>cb.addEventListener("change",()=>{ const xi=+cb.getAttribute("data-ex"), on=cb.checked; for(let i=0;i<_nsets(xi);i++) _setChk(xi,i,on,false); if(on) startRest("exercise"); }));
@@ -1665,6 +1685,9 @@ function renderToday(){
         saveAll(); renderLog();                                  // rebuild from the mutated snapshot
       }); panel.appendChild(ab); });
     }));
+    // ---- per-exercise rest field: edit persists by exercise name; reset reverts to the smart default ----
+    lp.querySelectorAll('.restfield').forEach(inp=>inp.addEventListener("change",()=>{ const xi=+inp.getAttribute("data-ex"), it=day[xi]; const v=Math.max(0,Math.round(+inp.value||0)); inp.value=v; state.restBy=state.restBy||{}; state.restBy[it.name]=v; const mm=lp.querySelector('.restmm[data-ex="'+xi+'"]'); if(mm) mm.textContent=mmss(v); const rb=lp.querySelector('.restreset[data-ex="'+xi+'"]'); if(rb) rb.classList.remove("off"); saveAll(); }));
+    lp.querySelectorAll('.restreset').forEach(btn=>btn.addEventListener("click",()=>{ const xi=+btn.getAttribute("data-ex"), it=day[xi]; if(state.restBy) delete state.restBy[it.name]; const d=smartRest(it); const inp=lp.querySelector('.restfield[data-ex="'+xi+'"]'); if(inp) inp.value=d; const mm=lp.querySelector('.restmm[data-ex="'+xi+'"]'); if(mm) mm.textContent=mmss(d); btn.classList.add("off"); saveAll(); }));
     const fin=el("button","logbtn"); fin.textContent=isLogged?"Update & finish":"Finish workout";
     fin.addEventListener("click",()=>{
       const ts=Date.now();
@@ -2111,6 +2134,7 @@ document.querySelectorAll("#wdpick button").forEach(b=>b.addEventListener("click
     if(sv.autoReg) state.autoReg=sv.autoReg;
     if(typeof sv.handoffDismissed!=="undefined") state.handoffDismissed=sv.handoffDismissed;
     if(sv.checklist) state.checklist=sv.checklist;
+    if(sv.restBy) state.restBy=sv.restBy;
   if(sv.cycleStart) state.cycleStart=sv.cycleStart;
   if(Array.isArray(sv.trainingDays)){ state.trainingDays=sv.trainingDays; document.querySelectorAll("#wdpick button").forEach(b=>b.classList.toggle("on", sv.trainingDays.includes(+b.dataset.d))); }
   } else { const su=$("#setup"); if(su) su.classList.remove("collapsed"); }
