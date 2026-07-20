@@ -319,6 +319,7 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-ra
 .swapopt{display:flex;flex-direction:column;align-items:center;gap:1px;font-size:12px;color:var(--text);background:var(--surface2);border:1px solid var(--line);border-radius:6px;padding:8px 11px;cursor:pointer;font-family:inherit;text-align:left;justify-content:space-between}
 .swapopt:hover{border-color:var(--accent);color:var(--text)}
 .swaptag{font-family:var(--mono);font-size:9px;letter-spacing:.05em;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:1px 5px;margin-left:6px}
+.voltag{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--amber);border:1px solid var(--amber);border-radius:20px;padding:2px 7px;margin-left:4px}
 .swapnone{font-size:11px;color:var(--faint);padding:4px}
 .resetrow{display:flex;gap:8px;margin-top:14px;padding-top:13px;border-top:1px solid var(--line)}
 .resetbtn{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:6px;padding:8px 13px;cursor:pointer}
@@ -1349,7 +1350,7 @@ function saveAll(){try{localStorage.setItem(STORE,JSON.stringify({maxes:state.ma
 const RestTimer=(function(){
   let remaining=0, iv=null, kind="set", bar=null, actx=null;
   function audioCtx(){ try{ if(!actx){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return null; actx=new AC(); } if(actx.state==="suspended") actx.resume(); return actx; }catch(e){ return null; } }
-  function beep(){ const a=audioCtx(); if(!a) return; try{ const mk=(t0,f,d)=>{ const o=a.createOscillator(), g=a.createGain(); o.type="sine"; o.frequency.value=f; o.connect(g); g.connect(a.destination); g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.35,t0+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t0+d); o.start(t0); o.stop(t0+d+0.03); }; const n=a.currentTime; mk(n,880,0.15); mk(n+0.2,1175,0.2); }catch(e){} }   // two-tone rising chime on completion
+  function beep(){ const a=audioCtx(); if(!a) return; try{ const mk=(t0,f,d)=>{ const o=a.createOscillator(), g=a.createGain(); o.type="square"; o.frequency.value=f; o.connect(g); g.connect(a.destination); g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.8,t0+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t0+d); o.start(t0); o.stop(t0+d+0.03); }; const n=a.currentTime; mk(n,880,0.18); mk(n+0.22,1175,0.24); }catch(e){} }   // loud two-tone chime on completion
   function bld(){ if(bar) return bar; bar=el("div","resttimer");
     bar.innerHTML='<div class="rt-label"></div><div class="rt-time">0:00</div><div class="rt-ctrls"><button class="rt-btn rt-minus" type="button">\u221215s</button><button class="rt-btn rt-plus" type="button">+15s</button><button class="rt-btn rt-skip" type="button">Skip</button></div>';
     document.body.appendChild(bar);
@@ -1363,7 +1364,7 @@ const RestTimer=(function(){
   function start(k,secs){ if(!(secs>0)) return; audioCtx(); kind=k; remaining=secs; if(iv) clearInterval(iv); paint(); iv=setInterval(tick,1000); }
   function adj(d){ if(!bar||!bar.classList.contains("show")) return; remaining=Math.max(0,remaining+d); if(remaining<=0){ done(); } else paint(); }   // cumulative: each press shifts remaining by 15s
   function stop(){ if(iv){clearInterval(iv);iv=null;} remaining=0; if(bar) bar.classList.remove("show","rt-done"); }
-  function done(){ if(iv){clearInterval(iv);iv=null;} const b=bld(); b.classList.add("show","rt-done"); b.querySelector(".rt-time").textContent="Rest complete"; b.querySelector(".rt-label").textContent="\u2713 "+(kind==="exercise"?"next exercise":"next set"); beep(); try{navigator.vibrate&&navigator.vibrate(180);}catch(e){} setTimeout(function(){ if(remaining<=0&&bar) bar.classList.remove("show","rt-done"); },1600); }
+  function done(){ if(iv){clearInterval(iv);iv=null;} const b=bld(); b.classList.add("show","rt-done"); b.querySelector(".rt-time").textContent="Rest complete"; b.querySelector(".rt-label").textContent="\u2713 "+(kind==="exercise"?"next exercise":"next set"); beep(); try{navigator.vibrate&&navigator.vibrate([200,90,200]);}catch(e){} setTimeout(function(){ if(remaining<=0&&bar) bar.classList.remove("show","rt-done"); },1600); }
   return { start:start, stop:stop, running:function(){return iv!=null;} };
 })();
 const toUnit=(load,from,to)=> from===to?load:(from==="lb"&&to==="kg"?load/LBKG:load*LBKG);
@@ -1408,6 +1409,21 @@ function restToSecs(str){ if(str==null) return null; const s=String(str).toLower
   return null; }
 function smartRest(it){ const p=restToSecs(it&&it.rest); return (p!=null)?p:(+(($("#restset")||{}).value)||120); }   // prescription, else global fallback
 function restForItem(it){ state.restBy=state.restBy||{}; const o=it&&state.restBy[it.name]; return (o!=null)?o:smartRest(it); }
+// (ours) how many extra accumulation sets have been EARNED by prior weeks in this block/day-slot for this lift.
+// A week earns +1 (cap 2) only if all its prescribed working sets were logged and the final set hit target-2 reps (not down-regulated).
+function accumEarnedSets(lift,blockIndex,curWib,di,baseSets,targetReps){
+  let gwBase=0; for(let i=0;i<blockIndex;i++) gwBase+=(((state.plan.blocks[i]||{}).lengthWk)||1);
+  let earned=0;
+  for(let w=0;w<curWib;w++){
+    const gwW=gwBase+w;
+    const sets=(state.log||[]).filter(s=>s.lift===lift&&s.block===blockIndex&&s.day===di&&s.gw===gwW&&s.setType==="working");
+    if(!sets.length) continue;                                              // week not (fully) trained → no advance
+    const last=sets[sets.length-1];
+    const ok=(sets.length>=(baseSets+earned))&&!last.downRegulated&&((+last.reps)>=(targetReps-2));
+    if(ok) earned=Math.min(earned+1,2);
+  }
+  return earned;
+}
 const loadFor=(z,l)=>ZK.prescribeLoad(z,state.maxes[l],kit().plates,kit().bar).roundedLoad;
 const ZONE_ORDER=["VH","H","M","L","VL","P"]; // most → least intense
 const meZone=b=>{ const p=b.prescriptions.find(p=>p.method==="ME"); if(p) return p.zone;
@@ -1531,6 +1547,16 @@ function renderToday(){
       if(tp.drop){ taperRest={lift:_lf}; day=[]; }
       else { const mv=(ZK.MAIN_MOVEMENTS||[]).find(m=>m.lift===_lf&&m.specificity===1)||{name:LAB2[_lf]}; day=[{group:"main",lift:_lf,name:mv.name,sets:tp.sets,reps:String(tp.reps),load:tp.load,cue:tp.label,method:"ME",rest:"180s"}]; } }
     else { day=(ZK.buildFullWeek(zones,b.budget.exposures,effMaxes(),kit().plates,kit().bar,b.phase,b.index,GYM,state.speed,state.speedOrder,mod,(band==="red")||deload,state.profile.daysPerWeek,state.freqPriority,wib,deload)[di])||[]; }
+    // (ours) closed-loop accumulation volume gate: the weekly set-ramp only advances on weeks whose final set
+    // met (target-2) reps with all sets completed. A short/incomplete week holds; the ramp resumes on a later success. Caps at +2.
+    if(b.phase==="accumulative" && wib>0 && !deload && band!=="red"){
+      day.forEach(it=>{ if(it.group==="main" && it.load!=null){
+        const openDelta=Math.min(wib,2), base=it.sets-openDelta, tgt=parseInt(it.reps,10)||0;
+        const earned=accumEarnedSets(it.lift,b.index,wib,di,base,tgt);
+        if(earned<openDelta) it.volHeld=true;                               // ramp was held back by an unmet week
+        it.sets=base+earned;
+      }});
+    }
     // apply on-the-fly exercise swaps (per block+day+slot), recomputing load for main swaps
     day.forEach((it,idx)=>{
       const ov=state.swaps[`${b.index}|${di}|${idx}`]; if(!ov) return;
@@ -1561,7 +1587,7 @@ function renderToday(){
       if(e.group!==lastGroup){lastGroup=e.group;const lab={speed:"Speed work",main:"Main lift",accessory:"Accessory work",core:"Core & midline"}[e.group];o.appendChild(el("div","tierlab",lab));}
       const card=el("div","ex"+(e.downRegulated?" downreg":"")+(e.group!=="main"?" acc":""));
       const badge=e.method?`<span class="exbadge ${e.method}">${e.method}</span>`:"";
-      card.appendChild(el("div","exhead",`<span class="exname">${e.name}</span>${badge}${e.swapped?' <span class="swaptag">swapped</span>':''}${e.pinned?' <span class="pintag">\ud83d\udccc pinned</span>':''}`));
+      card.appendChild(el("div","exhead",`<span class="exname">${e.name}</span>${badge}${e.swapped?' <span class="swaptag">swapped</span>':''}${e.pinned?' <span class="pintag">\ud83d\udccc pinned</span>':''}${e.volHeld?' <span class="voltag" title="a prior week fell 3+ reps short of target \u2014 the extra set is held until you complete the reps">\u21ba set held</span>':''}`));
       const main=el("div","exmain");
       let big=`<div class="exbig">${e.sets}<span class="x">×</span>${e.reps}`;
       if(e.load!=null) big+=`<span class="exat">@ ${e.load}<span class="u">${state.unit}</span></span>`;
