@@ -130,7 +130,7 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-ra
 .note b{color:var(--text)}
 .logpanel{background:var(--surface2);border:1px solid var(--line);border-radius:9px;padding:13px;margin-top:14px}
 .logh{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:9px}
-.logrow{display:grid;grid-template-columns:34px 84px 1fr 1fr 1fr;align-items:center;gap:6px;margin-bottom:6px;font-size:11px;color:var(--muted)}
+.logrow{display:grid;grid-template-columns:22px 34px 84px 1fr 1fr 1fr;align-items:center;gap:6px;margin-bottom:6px;font-size:11px;color:var(--muted)}
 .logrow .logn{color:var(--faint);font-family:var(--mono);font-size:10px}
 .logrow input{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:5px;color:var(--text);padding:5px 6px;font-family:var(--mono);font-size:12px;text-align:right}
 .logrow .lprev{font-family:var(--mono);font-size:10px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -172,6 +172,28 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-ra
 .storebar{font-size:11px;color:var(--amber);background:rgba(255,160,60,.08);border:1px solid var(--amber);border-radius:7px;padding:8px 11px;margin-bottom:10px;line-height:1.5}
 .logex{margin-bottom:4px}
 .logexn{font-size:11px;color:var(--text);font-family:var(--mono);margin:9px 0 5px;padding-top:7px;border-top:1px solid var(--line)}
+.setchk,.exchk{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;margin:0}
+.exchk{margin-right:7px;vertical-align:-2px}
+.logrow.checked{opacity:.5}
+.logrow.checked .logn{color:var(--green)}
+.logrow.checked input.ll,.logrow.checked input.lr,.logrow.checked input.lp{border-color:var(--green)}
+.exprog{font-family:var(--mono);font-size:9px;letter-spacing:.03em;color:var(--faint);margin-left:8px}
+.logex.exdone .logexn{color:var(--green)}
+.logex.exdone .exprog{color:var(--green)}
+.logswap{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:5px;font-family:var(--mono);font-size:9px;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;margin-left:8px;cursor:pointer;vertical-align:middle}
+.logswap:hover{border-color:var(--accent);color:var(--accent)}
+.logswappanel{margin:6px 0 2px}
+.resttimer{position:fixed;left:0;right:0;bottom:0;z-index:60;display:none;align-items:center;gap:14px;justify-content:center;background:var(--surface2);border-top:2px solid var(--accent);padding:12px 16px;box-shadow:0 -4px 18px rgba(0,0,0,.34)}
+.resttimer.show{display:flex}
+.rt-label{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.rt-time{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--text);min-width:74px;text-align:center;font-variant-numeric:tabular-nums}
+.rt-ctrls{display:flex;gap:8px}
+.rt-btn{font-family:var(--mono);font-size:12px;background:var(--surface);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px 12px;cursor:pointer}
+.rt-btn:hover{border-color:var(--accent)}
+.rt-skip{border-color:var(--accent);color:var(--accent)}
+.resttimer.rt-done{border-top-color:var(--green)}
+.resttimer.rt-done .rt-time{color:var(--green);font-size:15px}
+.resttimer.rt-done .rt-label{color:var(--green)}
 .savedtag{font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:.05em;margin-right:6px}
 .donebadge{font-family:var(--mono);font-size:9px;letter-spacing:.05em;color:var(--green);border:1px solid var(--green);border-radius:4px;padding:1px 6px;margin-left:8px;vertical-align:middle}
 .swaprow{margin-top:8px}
@@ -346,6 +368,8 @@ footer{color:var(--faint);font-family:var(--mono);font-size:10px;text-align:cent
       <div class="field"><label>Speed work</label><select id="speed"><option value="off" selected>off</option><option value="before">on · before main</option><option value="after">on · after main</option></select></div>
       <div class="field"><label>Extra days favor</label><select id="freq"><option value="bench" selected>bench</option><option value="squat">squat</option><option value="deadlift">deadlift</option></select></div>
       <div class="field"><label>Autoregulate maxes</label><select id="autoreg"><option value="on" selected>on</option><option value="off">off</option></select></div>
+      <div class="field"><label>Rest: between sets (s)</label><input id="restset" type="number" value="120" min="0" step="15"></div>
+      <div class="field"><label>Rest: between exercises (s)</label><input id="restex" type="number" value="180" min="0" step="15"></div>
     </div>
     <div class="wdrow"><label class="wdlbl">Training days — pick the weekdays you train</label><div class="wdpick" id="wdpick"><button data-d="0" class="on">Mon</button><button data-d="1">Tue</button><button data-d="2" class="on">Wed</button><button data-d="3">Thu</button><button data-d="4" class="on">Fri</button><button data-d="5">Sat</button><button data-d="6">Sun</button></div></div>
     <div class="maxes">
@@ -1312,7 +1336,26 @@ const PCOL={45:"#2f5fae",35:"#c79a1e",25:"#2e8b50",20:"#2f5fae",15:"#c79a1e",10:
 const state={plan:null,maxes:{},unit:"lb",profile:{},cycle:{},log:[],swaps:{},pins:{},bands:[],deloadWeek:null,autoReg:{},autoRegOn:true,autoRegLast:null,handoffDismissed:null,storeOK:true};
 const STORE="zk_v1", LBKG=2.2046226;
 function loadStore(){try{const r=localStorage.getItem(STORE);return r?JSON.parse(r):null;}catch(e){state.storeOK=false;return null;}}
-function saveAll(){try{localStorage.setItem(STORE,JSON.stringify({maxes:state.maxes,unit:state.unit,log:state.log,swaps:state.swaps,pins:state.pins,bands:state.bands,deloadWeek:state.deloadWeek,autoReg:state.autoReg,handoffDismissed:state.handoffDismissed,trainingDays:state.trainingDays,cycleStart:state.cycleStart,settings:{status:$("#status").value,planby:$("#planby").value,days:$("#days").value,weeks:$("#weeks").value,test:$("#test").value,compdate:$("#compdate").value,unit:$("#unit").value,speed:$("#speed").value,freq:$("#freq").value,autoreg:$("#autoreg")?$("#autoreg").value:"on",squat:$("#squat").value,bench:$("#bench").value,deadlift:$("#deadlift").value}}));}catch(e){state.storeOK=false;}}
+function saveAll(){try{localStorage.setItem(STORE,JSON.stringify({maxes:state.maxes,unit:state.unit,log:state.log,swaps:state.swaps,pins:state.pins,bands:state.bands,deloadWeek:state.deloadWeek,autoReg:state.autoReg,handoffDismissed:state.handoffDismissed,checklist:state.checklist,trainingDays:state.trainingDays,cycleStart:state.cycleStart,settings:{status:$("#status").value,planby:$("#planby").value,days:$("#days").value,weeks:$("#weeks").value,test:$("#test").value,compdate:$("#compdate").value,unit:$("#unit").value,speed:$("#speed").value,freq:$("#freq").value,autoreg:$("#autoreg")?$("#autoreg").value:"on",restset:$("#restset")?$("#restset").value:"120",restex:$("#restex")?$("#restex").value:"180",squat:$("#squat").value,bench:$("#bench").value,deadlift:$("#deadlift").value}}));}catch(e){state.storeOK=false;}}
+// ---- dual rest timer (ours): fixed bottom bar; auto-started on set/exercise completion; +15/-15 cumulative; skip ----
+const RestTimer=(function(){
+  let remaining=0, iv=null, kind="set", bar=null;
+  function bld(){ if(bar) return bar; bar=el("div","resttimer");
+    bar.innerHTML='<div class="rt-label"></div><div class="rt-time">0:00</div><div class="rt-ctrls"><button class="rt-btn rt-minus" type="button">\u221215s</button><button class="rt-btn rt-plus" type="button">+15s</button><button class="rt-btn rt-skip" type="button">Skip</button></div>';
+    document.body.appendChild(bar);
+    bar.querySelector(".rt-minus").addEventListener("click",function(){adj(-15);});
+    bar.querySelector(".rt-plus").addEventListener("click",function(){adj(15);});
+    bar.querySelector(".rt-skip").addEventListener("click",stop);
+    return bar; }
+  function fmt(s){ s=Math.max(0,Math.round(s)); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
+  function paint(){ const b=bld(); b.classList.remove("rt-done"); b.querySelector(".rt-time").textContent=fmt(remaining); b.querySelector(".rt-label").textContent=(kind==="exercise"?"Rest \u00b7 between exercises":"Rest \u00b7 between sets"); b.classList.add("show"); }
+  function tick(){ remaining--; if(remaining<=0){ remaining=0; done(); } else paint(); }
+  function start(k,secs){ if(!(secs>0)) return; kind=k; remaining=secs; if(iv) clearInterval(iv); paint(); iv=setInterval(tick,1000); }
+  function adj(d){ if(!bar||!bar.classList.contains("show")) return; remaining=Math.max(0,remaining+d); if(remaining<=0){ done(); } else paint(); }   // cumulative: each press shifts remaining by 15s
+  function stop(){ if(iv){clearInterval(iv);iv=null;} remaining=0; if(bar) bar.classList.remove("show","rt-done"); }
+  function done(){ if(iv){clearInterval(iv);iv=null;} const b=bld(); b.classList.add("show","rt-done"); b.querySelector(".rt-time").textContent="Rest complete"; b.querySelector(".rt-label").textContent="\u2713 "+(kind==="exercise"?"next exercise":"next set"); try{navigator.vibrate&&navigator.vibrate(180);}catch(e){} setTimeout(function(){ if(remaining<=0&&bar) bar.classList.remove("show","rt-done"); },1600); }
+  return { start:start, stop:stop, running:function(){return iv!=null;} };
+})();
 const toUnit=(load,from,to)=> from===to?load:(from==="lb"&&to==="kg"?load/LBKG:load*LBKG);
 function logsIn(unit){return state.log.map(x=>({...x,load:toUnit(x.load,x.unit||"lb",unit)}));}
 function buildCsv(){
@@ -1333,6 +1376,18 @@ function exportCsv(){
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 const kit=()=>ZK.KITS[state.unit];
+// ---- exercise-swap helpers (shared by the review view and the in-session log) ----
+const SWAP_GYM=["barbell","rack","dumbbell","cable","bench","bodyweight","machine"];
+function altsFor(it,day){
+  const L=(it.group==="main")?it.lift:((day.find(x=>x.group==="main")||{}).lift);
+  if(it.group==="main") return ZK.MAIN_MOVEMENTS.filter(m=>m.lift===L&&m.equipment.every(q=>SWAP_GYM.includes(q))&&(it.method?m.methods.includes(it.method):true)&&m.name!==it.name).sort((a,c)=>c.specificity-a.specificity).map(m=>({id:m.id,type:"main",label:m.name,sub:Math.round(m.specificity*100)+"% specific"}));
+  const tier=it.group==="accessory"?"B":"C";
+  return ZK.ACCESSORIES.filter(a=>a.emphasis.includes(L)&&a.tier===tier&&a.equipment.every(q=>SWAP_GYM.includes(q))&&a.name!==it.name).map(a=>({id:a.id,type:"acc",label:a.name,sub:a.sets+"\u00d7"+a.reps}));
+}
+function applySwapToItem(it,alt){   // mutate a day item in place (used for live swaps without a full recompute)
+  if(alt.type==="main"&&it.group==="main"){ const mv=ZK.MAIN_MOVEMENTS.find(m=>m.id===alt.id); if(mv){ it.name=mv.name; it.cue=mv.cue; it.swapped=true; if(it.zone!=null) it.load=ZK.roundToPlates(ZK.ZONE_PCT[it.zone]*effMaxOf(it.lift)*mv.loadFactor,kit().plates,kit().bar); } }
+  else if(alt.type==="acc"&&(it.group==="accessory"||it.group==="core")){ const ac=ZK.ACCESSORIES.find(a=>a.id===alt.id); if(ac){ it.name=ac.name; it.sets=ac.sets; it.reps=ac.reps; it.rest=ac.restSec+"s"; it.cue=ac.cue; it.swapped=true; } }
+}
 const loadFor=(z,l)=>ZK.prescribeLoad(z,state.maxes[l],kit().plates,kit().bar).roundedLoad;
 const ZONE_ORDER=["VH","H","M","L","VL","P"]; // most → least intense
 const meZone=b=>{ const p=b.prescriptions.find(p=>p.method==="ME"); if(p) return p.zone;
@@ -1524,14 +1579,7 @@ function renderToday(){
         btn.addEventListener("click",()=>{
           if(!panel.classList.contains("hidden")){panel.classList.add("hidden"); panel.innerHTML=""; return;}
           panel.classList.remove("hidden"); panel.innerHTML="";
-          const L=(e.group==="main")?e.lift:((day.find(x=>x.group==="main")||{}).lift);
-          let alts;
-          if(e.group==="main"){
-            alts=ZK.MAIN_MOVEMENTS.filter(m=>m.lift===L&&m.equipment.every(q=>GYM.includes(q))&&(e.method?m.methods.includes(e.method):true)&&m.name!==e.name).sort((a,c)=>c.specificity-a.specificity).map(m=>({id:m.id,type:"main",label:m.name,sub:Math.round(m.specificity*100)+"% specific"}));
-          }else{
-            const tier=e.group==="accessory"?"B":"C";
-            alts=ZK.ACCESSORIES.filter(a=>a.emphasis.includes(L)&&a.tier===tier&&a.equipment.every(q=>GYM.includes(q))&&a.name!==e.name).map(a=>({id:a.id,type:"acc",label:a.name,sub:a.sets+"×"+a.reps}));
-          }
+          const alts=altsFor(e,day);
           if(!alts.length){panel.innerHTML='<div class="swapnone">No alternatives for this slot.</div>'; return;}
           alts.forEach(a=>{const ab=el("button","swapopt"); ab.innerHTML=`<b>${a.label}</b><span>${a.sub}</span>`; ab.addEventListener("click",()=>{state.swaps[key]={type:a.type,id:a.id}; saveAll(); recompute();}); panel.appendChild(ab);});
         });
@@ -1550,7 +1598,7 @@ function renderToday(){
     startBtn.addEventListener("click",()=>{ state.todaySnap={day,bIndex:b.index,di,sid,band,gw}; renderLog(); });
     o.appendChild(startBtn);
   };
-  state.exitLog=()=>{ const sp=$("#setup"); if(sp) sp.style.display=""; const c=$("#todayctl"); if(c) c.style.display=""; recompute(); };
+  state.exitLog=()=>{ if(typeof RestTimer!=="undefined") RestTimer.stop(); const sp=$("#setup"); if(sp) sp.style.display=""; const c=$("#todayctl"); if(c) c.style.display=""; recompute(); };
   state.recompute=recompute;
   function renderLog(){
     const snap=state.todaySnap; if(!snap) return;
@@ -1574,14 +1622,15 @@ function renderToday(){
       const prev=priorSetsFor(it.name);
       const accRec=(it.load==null && it.muscles && ZK.accessoryProgression)?ZK.accessoryProgression({sessions:accSessions(it.name),targetReps:parseInt(it.reps,10),muscles:it.muscles,incUpper:state.unit==="kg"?2.5:5,incLower:state.unit==="kg"?5:10}):null;
       const tgt=it.load!=null?`${it.sets}×${it.reps} @ ${it.load} ${state.unit}`:`${it.sets}×${it.reps}`;
-      html+=`<div class="logex"><div class="logexn">${it.name} <span class="logtgt">${tgt}</span>${accRec&&accRec.bumped?` <span class="bump" title="2-for-2 rule met">\u2191 +${accRec.increment} \u00b7 2\u00d72</span>`:""}</div>`;
-      html+=`<div class="logrow loghd"><span class="logn">SET</span><span class="lprev">PREVIOUS</span><span class="lcol">${state.unit.toUpperCase()}</span><span class="lcol">REPS</span><span class="lcol">RPE</span></div>`;
+      const _canSwap=(it.group==="main"||it.group==="accessory"||it.group==="core");
+      html+=`<div class="logex" data-ex="${xi}"><div class="logexn"><input type="checkbox" class="exchk" data-ex="${xi}" title="mark whole exercise done">${it.name} <span class="logtgt">${tgt}</span><span class="exprog" data-ex="${xi}"></span>${_canSwap?` <button class="logswap" type="button" data-ex="${xi}" title="swap this exercise">\u21c4 swap</button>`:""}${accRec&&accRec.bumped?` <span class="bump" title="2-for-2 rule met">\u2191 +${accRec.increment} \u00b7 2\u00d72</span>`:""}</div>${_canSwap?`<div class="swappanel hidden logswappanel" data-ex="${xi}"></div>`:""}`;
+      html+=`<div class="logrow loghd"><span></span><span class="logn">SET</span><span class="lprev">PREVIOUS</span><span class="lcol">${state.unit.toUpperCase()}</span><span class="lcol">REPS</span><span class="lcol">RPE</span></div>`;
       for(let i=0;i<it.sets;i++){
         const sv=itSaved[i];
         const load=sv!=null?Math.round(toUnit(sv.load,sv.unit||state.unit,state.unit)):(it.load!=null?it.load:(accRec&&accRec.recWeight!=null?accRec.recWeight:""));
         const reps=sv!=null?sv.reps:it.reps, rpe=sv!=null?sv.rpe:8, ph=it.load!=null?it.load:"wt";
         const pv=prev[i]; const prevStr=pv!=null?`${Math.round(toUnit(pv.load,pv.unit||state.unit,state.unit))}${state.unit} \u00d7 ${pv.reps}`:"\u2014";
-        html+=`<div class="logrow" data-ex="${xi}"><span class="logn">Set ${i+1}</span>`+
+        html+=`<div class="logrow" data-ex="${xi}" data-set="${i}"><input type="checkbox" class="setchk" data-ex="${xi}" data-set="${i}"><span class="logn">Set ${i+1}</span>`+
           `<span class="lprev" title="last session for this lift">${prevStr}</span>`+
           `<input class="ll" type="number" step="any" value="${load}" placeholder="${ph}">`+
           `<input class="lr" type="number" value="${reps}">`+
@@ -1590,6 +1639,32 @@ function renderToday(){
       html+=`</div>`;
     });
     lp.innerHTML=html; o.appendChild(lp);
+    // ---- interactive checklist (ours): tick sets/exercises as completed. Each completion is the seam the rest timer hooks into. ----
+    function startRest(kind){ const rs=+(($("#restset")||{}).value)||120, re=+(($("#restex")||{}).value)||180; RestTimer.start(kind, kind==="exercise"?re:rs); }
+    state.checklist=state.checklist||{}; const clk=state.checklist[sid]=state.checklist[sid]||{};
+    const _k=(xi,i)=>xi+":"+i, _nsets=(xi)=>day[xi].sets;
+    const _exDone=(xi)=>{ for(let i=0;i<_nsets(xi);i++) if(!clk[_k(xi,i)]) return false; return _nsets(xi)>0; };
+    const _exUI=(xi)=>{ const ex=lp.querySelector('.logex[data-ex="'+xi+'"]'); if(!ex) return; let n=0; for(let i=0;i<_nsets(xi);i++) if(clk[_k(xi,i)]) n++; const p=ex.querySelector('.exprog'); if(p) p.textContent=n+"/"+_nsets(xi); const done=n===_nsets(xi)&&n>0; ex.classList.toggle("exdone",done); const c=ex.querySelector('.exchk'); if(c) c.checked=done; };
+    const _setChk=(xi,i,on,fire)=>{ const key=_k(xi,i), was=!!clk[key]; if(on) clk[key]=1; else delete clk[key]; const row=lp.querySelector('.logrow[data-ex="'+xi+'"][data-set="'+i+'"]'); if(row){ row.classList.toggle("checked",!!on); const cb=row.querySelector('.setchk'); if(cb) cb.checked=!!on; } _exUI(xi); if(on&&!was&&fire) startRest(_exDone(xi)?"exercise":"set"); saveAll(); };
+    day.forEach((it,xi)=>{ for(let i=0;i<it.sets;i++){ if(clk[_k(xi,i)]){ const row=lp.querySelector('.logrow[data-ex="'+xi+'"][data-set="'+i+'"]'); if(row){ row.classList.add("checked"); const cb=row.querySelector('.setchk'); if(cb) cb.checked=true; } } } _exUI(xi); });
+    lp.querySelectorAll('.setchk').forEach(cb=>cb.addEventListener("change",()=>{ _setChk(+cb.getAttribute("data-ex"),+cb.getAttribute("data-set"),cb.checked,true); }));
+    lp.querySelectorAll('.exchk').forEach(cb=>cb.addEventListener("change",()=>{ const xi=+cb.getAttribute("data-ex"), on=cb.checked; for(let i=0;i<_nsets(xi);i++) _setChk(xi,i,on,false); if(on) startRest("exercise"); }));
+    // ---- live in-session swap: change an exercise mid-workout; clears that slot's ticks and re-renders ----
+    lp.querySelectorAll('.logswap').forEach(btn=>btn.addEventListener("click",()=>{
+      const xi=+btn.getAttribute("data-ex"), it=day[xi];
+      const panel=lp.querySelector('.logswappanel[data-ex="'+xi+'"]'); if(!panel) return;
+      if(!panel.classList.contains("hidden")){ panel.classList.add("hidden"); panel.innerHTML=""; return; }
+      panel.classList.remove("hidden"); panel.innerHTML="";
+      const alts=altsFor(it,day);
+      if(!alts.length){ panel.innerHTML='<div class="swapnone">No alternatives for this slot.</div>'; return; }
+      alts.forEach(a=>{ const ab=el("button","swapopt"); ab.innerHTML="<b>"+a.label+"</b><span>"+a.sub+"</span>"; ab.addEventListener("click",()=>{
+        state.swaps[b.index+"|"+di+"|"+xi]={type:a.type,id:a.id};
+        applySwapToItem(it,a);                                   // mutate snap.day[xi] in place
+        for(let i=0;i<_nsets(xi);i++) delete clk[_k(xi,i)];      // the exercise changed → clear its ticks
+        if(typeof RestTimer!=="undefined") RestTimer.stop();
+        saveAll(); renderLog();                                  // rebuild from the mutated snapshot
+      }); panel.appendChild(ab); });
+    }));
     const fin=el("button","logbtn"); fin.textContent=isLogged?"Update & finish":"Finish workout";
     fin.addEventListener("click",()=>{
       const ts=Date.now();
@@ -1601,6 +1676,7 @@ function renderToday(){
       });
       state.bands=(state.bands||[]).filter(x=>x.sessionId!==sid); state.bands.push({sessionId:sid,ts,band:(snap&&snap.band)||"green"});
       runAutoReg(sid,snap);
+      if(state.checklist) delete state.checklist[sid];
       saveAll(); renderSchedule(); back();
     });
     const backb=el("button","logbtn ghost"); backb.textContent="Back to review"; backb.addEventListener("click",back);
@@ -1979,6 +2055,8 @@ function renderSchedule(){
   const reb=el("button","minibtn"); reb.textContent="reset to this week"; reb.addEventListener("click",()=>{ state.cycleStart=isoLocal(mondayThisWeek()); saveAll(); generate(); }); startRow.appendChild(reb); root.appendChild(startRow);
   root.appendChild(el("div","pnote","Pick any date to re-map the whole plan \u2014 every week\u2019s sessions below shift to the new calendar. The date snaps to that week\u2019s Monday."));
   const loggedDates=new Set(state.log.map(x=>isoLocal(new Date(x.ts)))), todayIso=isoLocal(new Date());
+  // done-ness by SESSION IDENTITY (block+week+day), not calendar date — so a session logged early/late still checks off.
+  const doneKeys=new Set(state.log.map(s=>{ let sg=s.gw; if(sg==null){ sg=0; for(let i=0;i<(s.block||0);i++) sg+=(state.plan.blocks[i]&&state.plan.blocks[i].lengthWk||1); } return (s.block==null?"?":s.block)+"|"+sg+"|"+(s.day==null?"?":s.day); }));
   const mon0=cycleStartMon(); let wk=1;
   let taperSec=null;   // taper weeks merge into ONE meet-relative countdown (no Monday-week splitting)
   state.plan.blocks.forEach((b,bIdx)=>{
@@ -1992,7 +2070,7 @@ function renderSchedule(){
         const date=addDaysD(mon0,_gw*7+dd.offset), dIso=isoLocal(date);
         const dOut=Math.round((compDateObj()-date)/86400000);
         const lab=dd.meet?"\ud83c\udfc6 Meet day":dd.lift?(LAB2[dd.lift]+" \u00b7 taper"+(isFinite(dOut)?" \u00b7 "+dOut+"d out":"")):("Day "+(di+1)+(mains[di]?" \u00b7 "+mains[di]:""));
-        const done=loggedDates.has(dIso), isToday=dIso===todayIso;
+        const done=doneKeys.has(b.index+"|"+_gw+"|"+di)||loggedDates.has(dIso), isToday=dIso===todayIso;
         const row=el("div","schrow tappable"+(done?" done":"")+(isToday?" today":"")+(dd.taper||dd.meet?" tapered":"")); row.innerHTML='<span class="sdate">'+fmtSchedDate(date)+'</span><span class="sday">'+lab+'</span>'+(done?'<span class="schk">\u2713</span>':isToday?'<span class="schtoday">today</span>':'<span class="schgo">\u203a</span>');
         row.addEventListener("click",()=>openDay(bIdx,i,di));
         host.appendChild(row);
@@ -2032,6 +2110,7 @@ document.querySelectorAll("#wdpick button").forEach(b=>b.addEventListener("click
     if(typeof sv.deloadWeek!=="undefined") state.deloadWeek=sv.deloadWeek;
     if(sv.autoReg) state.autoReg=sv.autoReg;
     if(typeof sv.handoffDismissed!=="undefined") state.handoffDismissed=sv.handoffDismissed;
+    if(sv.checklist) state.checklist=sv.checklist;
   if(sv.cycleStart) state.cycleStart=sv.cycleStart;
   if(Array.isArray(sv.trainingDays)){ state.trainingDays=sv.trainingDays; document.querySelectorAll("#wdpick button").forEach(b=>b.classList.toggle("on", sv.trainingDays.includes(+b.dataset.d))); }
   } else { const su=$("#setup"); if(su) su.classList.remove("collapsed"); }
