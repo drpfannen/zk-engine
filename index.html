@@ -285,6 +285,13 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-ra
 .logrow.backoff .logn{color:var(--faint)}
 .rpewarn{font-size:11px;color:var(--amber);background:rgba(219,162,63,.08);border:1px solid rgba(219,162,63,.4);border-radius:8px;padding:8px 10px;margin:2px 0 8px;line-height:1.45}
 .rpewarn.hidden{display:none}
+.adjchip{display:flex;flex-wrap:wrap;align-items:center;gap:9px;font-size:12px;color:var(--text);background:rgba(255,140,0,.08);border:1px solid rgba(255,140,0,.45);border-radius:10px;padding:10px 12px;margin:2px 0 10px;line-height:1.45}
+.adjchip.hidden{display:none}
+.adjtxt{flex:1;min-width:160px;color:var(--muted)}
+.adjtxt b{color:var(--text)}
+.adjbtn{font-family:var(--sans);font-weight:700;font-size:11px;letter-spacing:.05em;text-transform:uppercase;background:var(--accent);color:#1a0e00;border:none;border-radius:8px;padding:9px 14px;cursor:pointer}
+.adjbtn.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}
+.adjbtn.ghost:hover{border-color:var(--muted);color:var(--text)}
 .rpeadvis{font-size:12px;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:11px 13px;margin:0 0 14px;line-height:1.5}
 .rpeadvis b{color:var(--text);text-transform:uppercase;font-size:11px;letter-spacing:.04em}
 .attbasis{font-family:var(--mono);font-size:10px;color:var(--muted);padding:9px 14px 4px;line-height:1.5}
@@ -1564,13 +1571,52 @@ function generate(){ read(); state.plan=ZK.generatePlan(state.profile,state.cycl
 // and duplicates are dropped. These percentages/rep counts are our coaching calibration, NOT a Z&K prescription.
 // RPE-based load prescription (RTS / Tuchscherer lineage — NOT a Z&K construct; Z&K predates the RPE scale).
 // Effective reps-to-failure = reps + (10 − RPE); that maps to a %1RM via a standard nRM table.
-const NRM_PCT=[100,95.5,92.2,89.2,86.3,83.7,81.1,78.6,76.2,73.9,71.7,69.4];   // 1RM … 12RM
+const NRM_PCT=[100,95.5,92.2,89.2,86.3,83.7,81.1,78.6,76.2,73.9,71.7,69.4,67.5,65.6,63.8,62.1,60.5,59.0,57.6,56.2];   // 1RM … 20RM
 function pctForRepsRpe(reps,rpe){
   const n=Math.max(1,(+reps||1)+(10-(+rpe||10)));
-  if(n>=12) return NRM_PCT[11]/100;
+  const N=NRM_PCT.length;
+  if(n>=N) return NRM_PCT[N-1]/100;
   const i=Math.floor(n), f=n-i;
-  const lo=NRM_PCT[i-1], hi=NRM_PCT[Math.min(i,11)];
+  const lo=NRM_PCT[i-1], hi=NRM_PCT[Math.min(i,N-1)];
   return (lo+(hi-lo)*f)/100;
+}
+function nrmForPct(pct){                                    // inverse: what n-RM is this %1RM?
+  const p=pct*100, N=NRM_PCT.length;
+  if(p>=NRM_PCT[0]) return 1;
+  if(p<=NRM_PCT[N-1]) return N;
+  for(let i=0;i<N-1;i++){ const hi=NRM_PCT[i], lo=NRM_PCT[i+1]; if(p<=hi&&p>=lo) return (i+1)+(hi-p)/(hi-lo); }
+  return N;
+}
+function expectedRpeFor(load,reps,refMax){                  // what this load×reps should feel like (ours, RTS lineage)
+  if(!(refMax>0)||!(load>0)) return null;
+  return Math.max(1,Math.min(10,10-(nrmForPct(load/refMax)-(+reps||1))));
+}
+function targetRpeFor(it,setIdx){                           // the effort the program intended for THIS set
+  if(it&&it.rpeMode){
+    if(!setIdx) return it.targetRpe||8;                     // set 0 = the RPE-anchored top set
+    const implied=(it.suggest>0)?it.suggest/pctForRepsRpe(it.reps,it.targetRpe||8):0;   // max implied by the prescription
+    const e=implied>0?expectedRpeFor(backoffLoad(it.suggest),it.reps,implied):null;      // back-offs sit lighter, so expect less
+    if(e!=null) return Math.round(e*2)/2;
+  }
+  const s=String((it&&it.rpe)||"");
+  const nums=s.match(/\d+(?:\.\d+)?/g);
+  if(!nums||!nums.length) return 8;
+  return nums.length>1?(parseFloat(nums[0])+parseFloat(nums[1]))/2:parseFloat(nums[0]);
+}
+// (ours) intra-session adjustment: a logged RPE implies today's real capacity for this movement.
+// Back-solving it needs no working max, so this works for accessories too.
+const INTRA_TRIGGER=1.0;                                    // only act on a full RPE point of deviation
+const INTRA_FLOOR=0.85;                                     // never suggest below 85% of the prescribed load
+function revisedMaxFrom(load,reps,loggedRpe){ const p=pctForRepsRpe(reps,loggedRpe); return p>0?load/p:null; }
+function intraSuggest(it,load,reps,loggedRpe,setIdx){
+  const tgt=targetRpeFor(it,setIdx), drift=(+loggedRpe||0)-tgt;
+  if(!(drift>=INTRA_TRIGGER)) return null;                  // down-only: an easy set never raises the load mid-session
+  const rm=revisedMaxFrom(load,reps,loggedRpe); if(!(rm>0)) return null;
+  let next=ZK.roundToPlates(pctForRepsRpe(reps,tgt)*rm,kit().plates,kit().bar);
+  const floor=ZK.roundToPlates(INTRA_FLOOR*load,kit().plates,kit().bar);
+  if(next<floor) next=floor;
+  if(!(next<load)) return null;
+  return {next:next,target:tgt,drift:drift};
 }
 const ZONE_TARGET_RPE={VH:9.5,H:8,M:7.5,L:7,VL:6.5,P:6};                        // target effort per zone (ours)
 const BACKOFF_PCT=0.90;                                                        // back-offs at 90% of the top set (ours)
@@ -1880,9 +1926,33 @@ function renderToday(){
           `<input class="lp" type="number" min="1" max="10" value="${rpe}"></div>`;
       }
       if(it.rpeMode) html+=`<div class="rpewarn hidden" data-ex="${xi}"></div>`;
+      html+=`<div class="adjchip hidden" data-ex="${xi}"></div>`;
       html+=`</div>`;
     });
     lp.innerHTML=html; o.appendChild(lp);
+    // ---- intra-session adjustment (ours): a set logged well over its target RPE offers to drop the REMAINING sets ----
+    day.forEach((it,xi)=>{
+      const rows=[...lp.querySelectorAll('.logrow[data-ex="'+xi+'"][data-set]')];
+      const chip=lp.querySelector('.adjchip[data-ex="'+xi+'"]'); if(!chip||!rows.length) return;
+      const hide=()=>{ chip.classList.add("hidden"); chip.innerHTML=""; };
+      rows.forEach((row,i)=>{
+        const rpeIn=row.querySelector(".lp"), loadIn=row.querySelector(".ll"), repIn=row.querySelector(".lr");
+        if(!rpeIn||!loadIn||!repIn) return;
+        rpeIn.addEventListener("change",()=>{
+          const rest=rows.slice(i+1).filter(r=>r.getAttribute("data-touched")!=="1");
+          if(!rest.length){ hide(); return; }
+          const s=intraSuggest(it,+loadIn.value||0,+repIn.value||0,+rpeIn.value||0,i);
+          if(!s){ hide(); return; }
+          chip.classList.remove("hidden");
+          chip.innerHTML='<span class="adjtxt">RPE '+(+rpeIn.value)+' \u2014 <b>'+s.drift.toFixed(1)+'</b> over the target of '+s.target+'. Drop the remaining '+rest.length+' set'+(rest.length>1?"s":"")+' to <b>'+s.next+' '+state.unit+'</b>?</span>';
+          const ap=el("button","adjbtn","Apply");
+          ap.addEventListener("click",()=>{ rest.forEach(r=>{ r.querySelector(".ll").value=s.next; r.setAttribute("data-touched","1"); }); hide(); });
+          const dm=el("button","adjbtn ghost","Dismiss");
+          dm.addEventListener("click",hide);
+          chip.appendChild(ap); chip.appendChild(dm);
+        });
+      });
+    });
     // ---- top set @ RPE: back-offs derive from the ACTUAL top set; the guardrail contains a badly-called RPE ----
     day.forEach((it,xi)=>{ if(!it.rpeMode) return;
       const rows=[...lp.querySelectorAll('.logrow[data-ex="'+xi+'"][data-set]')];
