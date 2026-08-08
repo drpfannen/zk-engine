@@ -633,14 +633,14 @@ footer{color:var(--faint);font-family:var(--mono);font-size:10px;text-align:cent
 
 <div class="tabs">
   
-  <button id="t-today" class="on">Today</button>
-  <button id="t-progress">Progress</button>
-  <button id="t-sched">Schedule</button>
+  <button id="t-sched" class="on">Schedule</button>
+  <button id="t-today">Today</button>
   <button id="t-gpp">GPP</button>
+  <button id="t-progress">Progress</button>
 </div>
-<div id="today"></div>
+<div id="today" class="hidden"></div>
 <div id="progress" class="hidden"></div>
-<div id="schedule" class="hidden"></div>
+<div id="schedule"></div>
 <div id="gpp" class="hidden"></div>
 
 <footer>built to learn — not medical or coaching advice</footer>
@@ -2408,10 +2408,14 @@ function renderToday(){
     if(day.some(e=>e.group==="speed")){const sn=el("div","note");sn.innerHTML=`<b>Speed work is explosive intent on a moderate load, not measured velocity</b> — there's no bar-speed tool here, so keep every rep genuinely fast and end the set when it slows. It's gated to base & strength blocks and drops at the peak.`;o.appendChild(sn);}
     const n=el("div","note"); n.innerHTML=band==="green"?`Today <b>counts</b> toward your e1RM re-baseline.`:`These sets are <b>tagged down-regulated</b> — excluded from your e1RM, so a rough day can't masquerade as lost strength.`;
     o.appendChild(n);
-    // Start workout → snapshot this reviewed session, then open the focused log view
+    // Start workout → snapshot this reviewed session, then open the focused log view.
+    // A session is identified by block+week+day, NOT by the calendar date it was performed on:
+    // opening Monday's session on Tuesday must find Monday's log, otherwise the app offers a fresh
+    // "Start workout" and a second set of sets gets written for a day already trained.
     const today=new Date().toISOString().slice(0,10);
-    const sid=`${today}|b${b.index}|w${gw}|d${di}`;
-    const already=state.log.some(s=>s.sessionId===sid);
+    const _prior=state.log.find(s=>s.block===b.index&&s.gw===gw&&s.day===di);
+    const sid=_prior?_prior.sessionId:`${today}|b${b.index}|w${gw}|d${di}`;
+    const already=!!_prior;
     if(!state.storeOK){const sb=el("div","storebar");sb.innerHTML="Saving is unavailable in this preview window. <b>Download the file and open it in your own browser</b> to save logs and progress between sessions.";o.appendChild(sb);}
     const startBtn=el("button","startbtn"); startBtn.textContent=already?"✎ Open workout log":"▶ Start workout";
     startBtn.addEventListener("click",()=>{ state.todaySnap={day,bIndex:b.index,di,sid,band,gw}; renderLog(); });
