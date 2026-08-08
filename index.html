@@ -113,7 +113,6 @@ header{padding:24px 0 16px;border-bottom:1px solid var(--line);margin-bottom:18p
 .rbnum b{color:var(--text);font-size:17px}
 .rbarrow{color:var(--faint);margin:0 6px}
 .rbmeta{font-family:var(--mono);font-size:10px;color:var(--faint);margin-left:auto}
-.rbnote{font-size:10px;color:var(--faint);line-height:1.5;margin:10px 0 0;padding-top:9px;border-top:1px solid var(--line)}
 .rbbtns{display:flex;gap:9px;margin-top:12px;flex-wrap:wrap}
 .rbbtn{flex:1;min-width:130px;font-family:var(--sans);font-weight:800;font-size:12px;letter-spacing:.05em;text-transform:uppercase;background:linear-gradient(180deg,#3ee3fb,#12b8dd);color:#052532;border:none;border-radius:10px;padding:12px 14px;cursor:pointer}
 .rbbtn.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}
@@ -215,7 +214,6 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-ra
 .potadd:hover{background:rgba(40,217,242,.12)}
 .potoff{margin-left:auto;background:transparent;border:1px solid var(--line);color:var(--faint);border-radius:5px;font-size:11px;line-height:1;padding:2px 7px;cursor:pointer}
 .potoff:hover{border-color:var(--red);color:var(--red)}
-.rampfoot{font-size:10px;color:var(--faint);line-height:1.5;margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
 .logrow{display:grid;grid-template-columns:22px 34px 84px 1fr 1fr 1fr;align-items:center;gap:6px;margin-bottom:6px;font-size:11px;color:var(--muted)}
 .logrow .logn{color:var(--faint);font-family:var(--mono);font-size:10px}
 .logrow input{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:5px;color:var(--text);padding:5px 6px;font-family:var(--mono);font-size:12px;text-align:right}
@@ -340,8 +338,6 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-ra
 .wurow.checked .wul{color:var(--green)}
 .rpepx{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;line-height:1.5;margin-top:2px}
 .rpepx b{color:var(--text)}
-.rpesrc{font-family:var(--mono);font-size:9px;letter-spacing:.02em;color:var(--faint);text-align:center;margin-top:4px}
-.rpesrc b{color:var(--muted)}
 .exbig .x{color:var(--faint)}
 .logrow.topset .logn{color:var(--accent);font-weight:800}
 .logrow.topset input.ll{border-color:var(--accent);font-weight:700}
@@ -489,8 +485,6 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-ra
 .resetbtn{flex:1;min-width:104px;font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);background:transparent;border:1px solid var(--accent);border-radius:10px;padding:12px 10px;cursor:pointer;transition:background .12s}
 .resetbtn:hover{background:rgba(40,217,242,.12)}
 .resetbtn.danger{color:var(--red);border-color:var(--red)}
-.backupnote{font-size:11px;color:var(--faint);line-height:1.55;margin-top:10px}
-.backupnote b{color:var(--muted)}
 .resetbtn.danger:hover{background:rgba(224,86,62,.12)}
 .resetbtn.danger:hover{color:var(--accent);border-color:var(--accent)}
 .empty{color:var(--muted);font-size:13px;line-height:1.6;text-align:center;padding:40px 20px;background:var(--surface2);border:1px solid var(--line);border-radius:10px}
@@ -518,7 +512,6 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-ra
 .prwhen{font-family:var(--mono);font-size:9px;color:var(--faint)}
 .pre1{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:9px;padding-top:8px;border-top:1px solid var(--line)}
 .pre1 b{color:var(--text)}
-.prnote{margin-top:4px;line-height:1.55}
 .gpprec{background:linear-gradient(180deg,rgba(40,217,242,.1),rgba(40,217,242,.03));border:1px solid rgba(40,217,242,.4);border-radius:10px;padding:11px 13px;margin-bottom:14px}
 .gpprecl{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
 .gpprec b{color:var(--text);font-size:14px}
@@ -568,7 +561,6 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-ra
 .mvdelta b{font-weight:700}
 .mvdelta.up b{color:var(--green)}
 .mvdelta.down b{color:var(--amber)}
-.mvnote{margin-top:12px;line-height:1.55}
 .pcard{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:14px 12px}
 .pcard .pch{font-family:var(--sans);font-weight:700;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);text-align:center;margin-bottom:12px}
 .donutwrap{display:flex;flex-direction:column;align-items:center;gap:11px}
@@ -626,9 +618,6 @@ footer{color:var(--faint);font-family:var(--mono);font-size:10px;text-align:cent
       <div class="field"><label>Top set @ RPE (heavy)</label><select id="rpemode"><option value="on" selected>on</option><option value="off">off</option></select></div>
       <div class="field"><label>Overhead press</label><select id="ohpmode"><option value="off" selected>off</option><option value="on">train it</option></select></div>
       <div class="field"><label>OHP max</label><input id="ohp" type="number" value="115"></div>
-      <div class="field"><label>Potentiation rest (s)</label><input id="potrest" type="number" value="180" min="60" step="30"></div>
-      <div class="field"><label>Rest: between sets (s)</label><input id="restset" type="number" value="120" min="0" step="15"></div>
-      <div class="field"><label>Rest: between exercises (s)</label><input id="restex" type="number" value="180" min="0" step="15"></div>
     </div>
     <div class="wdrow"><label class="wdlbl">Training days — pick the weekdays you train</label><div class="wdpick" id="wdpick"><button data-d="0" class="on">Mon</button><button data-d="1">Tue</button><button data-d="2" class="on">Wed</button><button data-d="3">Thu</button><button data-d="4" class="on">Fri</button><button data-d="5">Sat</button><button data-d="6">Sun</button></div></div>
     <div class="maxes">
@@ -639,25 +628,22 @@ footer{color:var(--faint);font-family:var(--mono);font-size:10px;text-align:cent
     <button class="btn" id="gen">Build my plan</button>
     <div class="resetrow"><button id="backup-json" class="resetbtn">Back up</button><button id="restore-json" class="resetbtn">Restore</button><button id="export-csv" class="resetbtn">Export CSV</button><button id="reset-logs" class="resetbtn">Reset logs</button><button id="reset-all" class="resetbtn danger">Full reset</button></div>
     <input id="restore-file" type="file" accept="application/json,.json" class="hidden">
-    <div class="backupnote">Your training data lives only in this browser. <b>Back up</b> writes everything — log, maxes, settings, swaps — to a JSON file you keep; <b>Restore</b> loads one back. Do this before changing phones or clearing browser data.</div>
   </div>
 </div>
 
 <div class="tabs">
-  <button id="t-plan">Plan</button>
-  <button id="t-today">Today</button>
+  
+  <button id="t-today" class="on">Today</button>
   <button id="t-progress">Progress</button>
-  <button id="t-sched" class="on">Schedule</button>
+  <button id="t-sched">Schedule</button>
   <button id="t-gpp">GPP</button>
 </div>
-
-<div id="plan" class="hidden"></div>
-<div id="today" class="hidden"></div>
+<div id="today"></div>
 <div id="progress" class="hidden"></div>
-<div id="schedule"></div>
+<div id="schedule" class="hidden"></div>
 <div id="gpp" class="hidden"></div>
 
-<footer>deterministic engine · loads round to your plates · readiness only ever lightens the day<br>built to learn — not medical or coaching advice</footer>
+<footer>built to learn — not medical or coaching advice</footer>
 </div>
 
 <script>"use strict";
@@ -1861,7 +1847,7 @@ const PCOL={45:"#3a6fc4",35:"#d4a72c",25:"#35a05e",20:"#3a6fc4",15:"#d4a72c",10:
 const state={plan:null,maxes:{},unit:"lb",profile:{},cycle:{},log:[],swaps:{},pins:{},bands:[],deloadWeek:null,autoReg:{},autoRegOn:true,autoRegLast:null,handoffDismissed:null,storeOK:true};
 const STORE="zk_v1", LBKG=2.2046226;
 function loadStore(){try{const r=localStorage.getItem(STORE);return r?JSON.parse(r):null;}catch(e){state.storeOK=false;return null;}}
-function saveAll(){try{localStorage.setItem(STORE,JSON.stringify({maxes:state.maxes,unit:state.unit,log:state.log,swaps:state.swaps,pins:state.pins,bands:state.bands,deloadWeek:state.deloadWeek,autoReg:state.autoReg,handoffDismissed:state.handoffDismissed,checklist:state.checklist,restBy:state.restBy,meetAttempts:state.meetAttempts,attemptBase:state.attemptBase,phaseOverride:state.phaseOverride,rebaseSeen:state.rebaseSeen,notes:state.notes,gpp:state.gpp,gppLog:state.gppLog,warmupSwaps:state.warmupSwaps,potOpt:state.potOpt,potBySession:state.potBySession,trainingDays:state.trainingDays,cycleStart:state.cycleStart,settings:{status:$("#status").value,planby:$("#planby").value,days:$("#days").value,weeks:$("#weeks").value,test:$("#test").value,compdate:$("#compdate").value,unit:$("#unit").value,speed:$("#speed").value,freq:$("#freq").value,autoreg:$("#autoreg")?$("#autoreg").value:"on",rpemode:$("#rpemode")?$("#rpemode").value:"on",potrest:$("#potrest")?$("#potrest").value:"180",ohpmode:$("#ohpmode")?$("#ohpmode").value:"off",ohp:$("#ohp")?$("#ohp").value:"115",restset:$("#restset")?$("#restset").value:"120",restex:$("#restex")?$("#restex").value:"180",squat:$("#squat").value,bench:$("#bench").value,deadlift:$("#deadlift").value}}));}catch(e){state.storeOK=false;}}
+function saveAll(){try{localStorage.setItem(STORE,JSON.stringify({maxes:state.maxes,unit:state.unit,log:state.log,swaps:state.swaps,pins:state.pins,bands:state.bands,deloadWeek:state.deloadWeek,autoReg:state.autoReg,handoffDismissed:state.handoffDismissed,checklist:state.checklist,restBy:state.restBy,meetAttempts:state.meetAttempts,attemptBase:state.attemptBase,phaseOverride:state.phaseOverride,rebaseSeen:state.rebaseSeen,notes:state.notes,gpp:state.gpp,gppLog:state.gppLog,warmupSwaps:state.warmupSwaps,potOpt:state.potOpt,potBySession:state.potBySession,trainingDays:state.trainingDays,cycleStart:state.cycleStart,settings:{status:$("#status").value,planby:$("#planby").value,days:$("#days").value,weeks:$("#weeks").value,test:$("#test").value,compdate:$("#compdate").value,unit:$("#unit").value,speed:$("#speed").value,freq:$("#freq").value,autoreg:$("#autoreg")?$("#autoreg").value:"on",rpemode:$("#rpemode")?$("#rpemode").value:"on",ohpmode:$("#ohpmode")?$("#ohpmode").value:"off",ohp:$("#ohp")?$("#ohp").value:"115",squat:$("#squat").value,bench:$("#bench").value,deadlift:$("#deadlift").value}}));}catch(e){state.storeOK=false;}}
 // ---- dual rest timer (ours): fixed bottom bar; auto-started on set/exercise completion; +15/-15 cumulative; skip ----
 const RestTimer=(function(){
   let remaining=0, iv=null, kind="set", bar=null, actx=null;
@@ -1949,7 +1935,7 @@ function restToSecs(str){ if(str==null) return null; const s=String(str).toLower
   m=s.match(/(\d+)\s*s/); if(m) return +m[1];                                            // "90s"
   m=s.match(/^\s*(\d+)\s*$/); if(m) return +m[1];                                        // bare seconds
   return null; }
-function smartRest(it){ const p=restToSecs(it&&it.rest); return (p!=null)?p:(+(($("#restset")||{}).value)||120); }   // prescription, else global fallback
+function smartRest(it){ const p=restToSecs(it&&it.rest); return (p!=null)?p:REST_SET_DEFAULT; }   // each exercise carries its own rest; this is only a fallback
 function restForItem(it){ state.restBy=state.restBy||{}; const o=it&&state.restBy[it.name]; return (o!=null)?o:smartRest(it); }
 // (ours) how many extra accumulation sets have been EARNED by prior weeks in this block/day-slot for this lift.
 // A week earns +1 (cap 2) only if all its prescribed working sets were logged and the final set hit target-2 reps (not down-regulated).
@@ -2001,7 +1987,7 @@ function read(){
   state.ohpOn=$("#ohpmode")?$("#ohpmode").value==="on":false;
   state.maxes.ohp=+(($("#ohp")||{}).value)||0;
 }
-function generate(){ read(); state.plan=ZK.generatePlan(state.profile,state.cycle); renderPlan(); renderToday(); renderProgress(); renderSchedule(); saveAll(); }
+function generate(){ read(); state.plan=ZK.generatePlan(state.profile,state.cycle); renderToday(); renderProgress(); renderSchedule(); saveAll(); }
 
 // (ours) warm-up ramp — steps are computed from the WORK weight (not 1RM), so the ramp adapts to the day:
 // a light high-rep set gets a short ramp, a heavy single gets a long one. Loads round to your actual plates
@@ -2162,7 +2148,9 @@ const POTENTIATE_OPTS=[
   {id:"low_hurdle_jump",name:"Low hurdle jump",sets:2,reps:3,src:"T15.1 2\u00d75"},
   {id:"med_ball_slam",name:"Light med ball slam",sets:2,reps:5,src:"T15.1 3\u00d76"},
 ];
-const POT_REST_DEFAULT=180;      // Table 15.2: rest before the main activity 3-12 min (heavy preconditioning)
+const POT_REST_DEFAULT=180;
+const REST_SET_DEFAULT=120;      // fallback only — per-exercise rest is derived from the prescription and editable in the log
+const REST_EX_DEFAULT=180;       // between exercises; adjust in the moment with the timer's ±15s buttons      // Table 15.2: rest before the main activity 3-12 min (heavy preconditioning)
 function warmupPlan(){
   const ov=state.warmupSwaps||{};
   const pick=(base)=>base.map(x=>{ const s=ov[x.id]; if(!s) return x; const alt=WARMUP_ALTS.concat(WARMUP_RAISE,WARMUP_ACTIVATE).find(a=>a.id===s); return alt?Object.assign({},alt,{slot:x.id}):x; });
@@ -2212,46 +2200,6 @@ function plateBar(load){
   return col;
 }
 
-function renderPlan(){
-  const root=$("#plan"); root.innerHTML="";
-  const c=state.cycle, peak=c.testWeek!=null, cd=daysToComp();
-  const cyc=el("div","cyc"); cyc.innerHTML=`<span>cycle <b>${c.cycleLengthWeeks} wk</b></span><span>${state.profile.daysPerWeek} days/wk</span><span>${peak?`peak → <b>test wk ${c.testWeek}</b>`:"continuous"}</span>${cd!=null?`<span>🏆 comp <b>${cd>0?cd+"d":cd===0?"today":"past"}</b></span>`:""}<span>units <b>${state.unit}</b></span>`;
-  root.appendChild(cyc);
-  if(state.planBy==="comp"){ let msg, dc=daysToComp();
-    if(!state.compDate||dc==null||dc<=0) msg="<b>Competition-date planning is on, but no future date is set.</b> Add a competition date in Setup and the cycle length builds from it automatically.";
-    else { const cw=state.compWeeks;
-      msg="<b>Built around your competition date</b> ("+fmtCompDate(0)+", "+cw.days+" days out): "+([8,11,18].includes(cw.used)?"an":"a")+" <b>"+cw.used+"-week</b> cycle peaking on your meet \u2014 cycle weeks and test week are derived, so you do not set them."
-        +(cw.raw<4?" Your meet is sooner than a full cycle fits, so this is essentially a peak/taper block \u2014 lean on the Competition day for the final days.":cw.raw>20?" Your meet is 20+ weeks out, so this shows the final 20-week run-up.":""); }
-    root.appendChild(el("div","note compnote",msg)); }
-  let wk=1;
-  state.plan.blocks.forEach(b=>{
-    const taper=b.phase==="realizational";
-    const card=el("div","block"+(taper?" taper":""));
-    const head=el("div","bhead");
-    head.appendChild(el("div","idx","B"+b.index));
-    head.appendChild(el("div","phase",b.phase));
-    head.appendChild(el("div","wks",`wk ${wk}–${wk+b.lengthWk-1}`+(taper?" · taper→test":"")));
-    if(taper&&state.cycle.testWeek!=null&&state.planBy!=="comp") head.appendChild(el("div","testbadge",`🎯 TEST · wk ${state.cycle.testWeek}`));
-    card.appendChild(head); wk+=b.lengthWk;
-    const r=b.budget.ratio;
-    card.appendChild(el("div","ratio",`ME ${Math.round(r.ME*100)} · DE ${Math.round(r.DE*100)} · RE ${Math.round(r.RE*100)}  →  exposures ME${b.budget.exposures.ME} DE${b.budget.exposures.DE} RE${b.budget.exposures.RE}`));
-    const zones={}; b.prescriptions.forEach(p=>zones[p.method]=p.zone);
-    lifts.forEach(l=>{
-      const lift=el("div","lift");
-      const zlist=["ME","DE","RE"].filter(m=>zones[m]).map(m=>`${m} ${zones[m]}`).join(" · ");
-      lift.appendChild(el("div","lname",`<span>${l}</span><span class="zones">${zlist}</span>`));
-      const work=el("div","work");
-      const mz=meZone(b);
-      work.innerHTML=`<div class="big">${loadFor(mz,l)}<span class="u">${state.unit}</span></div><div class="meta"><span class="z">${mz}</span> · ${ZK.prescribeLoad(mz,1,{},0).pctOf1rm*100|0}% 1RM<br>top set</div>`;
-      work.appendChild(plateBar(loadFor(mz,l)));
-      lift.appendChild(work);
-      card.appendChild(lift);
-    });
-    root.appendChild(card);
-  });
-  const note=el("div","note"); note.innerHTML=`<b>Plan view shows competition-lift reference loads at your current maxes, held flat.</b> The <b>Today</b> tab has the actual session — including squat/bench/deadlift <b>variations</b> as the main lift in earlier blocks, converging on the competition lifts as you peak. Within a block, loads and sets now ramp week to week \u2014 accumulation adds volume, transmutation adds intensity, realization tapers \u2014 so the <b>Week</b> selector on Today shows the current week\u2019s targets. Logging drives real block-to-block progression.`;
-  root.appendChild(note);
-}
 
 function renderToday(){
   const root=$("#today"); root.innerHTML="";
@@ -2363,8 +2311,9 @@ function renderToday(){
     if(_rpeOn&&band!=="green") o.appendChild(el("div","rpeadvis","Readiness is <b>"+band+"</b> today, but heavy work is RPE-anchored \u2014 the zone is not reduced. Expect your RPE "+(day.find(x=>x.rpeMode)||{targetRpe:8}).targetRpe+" to land lighter than the suggestion; that is the system working."));
     const ld=lastDone(b.index,gw,di);
     const _wd=weekdayDateFor(di,gw), _ds=_wd?_wd.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"}):"";
+    const _dsShort=_wd?_wd.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"}):"";
     o.appendChild(el("div","dayhdr",`Today's Session${b.lengthWk>1?` \u00b7 Wk ${wib+1}`:""} \u00b7 Day ${di+1}${ld!=null?` <span class="donebadge">✓ done ${fmtWhen(ld)}</span>`:""}`));
-    o.appendChild(el("div","daysub",`${_ds?_ds+" \u00b7 ":""}${day.length} exercises \u00b7 ${b.phase}${b.lengthWk>1?` \u00b7 week ${wib+1} of ${b.lengthWk}`:""}${deload?" \u00b7 deload week":""}${taperActive?" \u00b7 taper":""}`));
+    o.appendChild(el("div","daysub",`${_dsShort?_dsShort+" \u00b7 ":""}${b.phase}${deload?" \u00b7 deload":""}${taperActive?" \u00b7 taper":""}`));
     // block-boundary rebase prompt — only in week 1 of a block, once per boundary until dismissed or applied
     if(wib===0 && !deload && !taperActive){
       state.rebaseSeen=state.rebaseSeen||{};
@@ -2378,8 +2327,6 @@ function renderToday(){
           cands.forEach(c=>{ h+='<div class="rbrow"><span class="rbl">'+c.lift+'</span>'
             +'<span class="rbnum">'+c.from+'<span class="rbarrow">\u2192</span><b>'+c.to+'</b> '+state.unit+'</span>'
             +'<span class="rbmeta">'+(c.pct>0?"+":"")+(c.pct*100).toFixed(1)+'% \u00b7 '+c.sets+' sets'+(c.wasCapped?' \u00b7 capped from '+c.raw:'')+'</span></div>'; });
-          h+='<div class="rbnote">e1RM is an Epley estimate from sets at \u2264 8 reps, RPE \u2265 8 \u2014 not a measured 1RM. '
-            +'Moves are capped at '+Math.round(REBASE_CAP*100)+'% per block and need '+REBASE_MIN_SETS+'+ qualifying sets. Applying resets the running autoregulation adjustment.</div>';
           card.innerHTML=h;
           const btns=el("div","rbbtns");
           const ap=el("button","rbbtn","Use updated maxes");
@@ -2412,8 +2359,7 @@ function renderToday(){
       if(e.load!=null) big+=`<span class="exat">@ ${e.load}<span class="u">${state.unit}</span></span>`;
       main.innerHTML=big+`</div>`;
       if(e.rpeMode){ main.innerHTML=`<div class="exbig">${e.reps}<span class="x">@</span>RPE ${e.targetRpe}</div>`
-        +`<div class="rpepx">top set \u00b7 suggest <b>${e.suggest} ${state.unit}</b>${e.backoffSets?` \u00b7 then ${e.backoffSets}\u00d7${e.reps} @ ${Math.round(e.backoffPct*100)}% of it`:""}</div>`
-        +`<div class="rpesrc" title="RPE 10 = 0 reps in reserve, 9 = 1, 8 = 2, 7 = 3. Load conversion uses the %1RM-repetition relationship (NSCA T18.8). The top-set/back-off structure is ours (RTS lineage).">RPE \u2261 reps in reserve \u00b7 NSCA T18.10 (Zourdos et al.) \u00b7 structure <b>ours</b></div>`; }
+        +`<div class="rpepx">top set \u00b7 suggest <b>${e.suggest} ${state.unit}</b>${e.backoffSets?` \u00b7 then ${e.backoffSets}\u00d7${e.reps} @ ${Math.round(e.backoffPct*100)}% of it`:""}</div>` }
       if(e.load!=null) main.appendChild(plateBar(e.load));
       card.appendChild(main);
       if(e.group==="main"&&e.load!=null){ const wu=warmupRamp(e.load);
@@ -2491,7 +2437,8 @@ function renderToday(){
     state.checklist=state.checklist||{}; const _clk0=state.checklist[sid]=state.checklist[sid]||{};
     const clkW=(k)=>!!_clk0["w:"+k];                       // warm-up ticks live in their own key namespace
     const lp=el("div","logpanel");
-    let html=`<div class="logh">Each set is pre-filled with the target — edit only what changed.${isLogged?' <span class="savedtag">✓ saved — editing</span>':''}</div>`;
+    let html="";
+    
     // ---- RAMP warm-up: Raise, then Activate & Mobilize (Ch. 15 T15.1) ----
     const pot=potentiationPick();
     const potEligible=(b.phase==="transmutative"||b.phase==="realizational");
@@ -2509,7 +2456,6 @@ function renderToday(){
       };
       phase("Raise",wp.raise,"r");
       phase("Activate &amp; mobilize",wp.activate,"a");
-      html+='<div class="rampfoot">Finish within ~15 min of your first work set. Static stretching is left out on purpose \u2014 it can blunt force output before heavy work.</div>';
       html+='</div>';
     }
     const _firstMain=day.findIndex(x=>x.group==="main"&&x.load!=null);   // potentiation attaches to the first main lift only
@@ -2535,7 +2481,7 @@ function renderToday(){
             html+='<div class="wrow'+(clkW("p:0")?" checked":"")+'" data-w="p:0"><input type="checkbox" class="wchk" data-w="p:0"'+(clkW("p:0")?" checked":"")+'>'
               +'<span class="wnm">'+pot.name+'</span><span class="wds">'+pot.sets+' \u00d7 '+pot.reps+'</span>'
               +'<button class="wsw potsw" type="button" title="swap">\u21c4</button></div><div class="wswpanel hidden potpanel"></div>';
-            html+='<div class="potnote">Tick it to start a <b>'+Math.round((+(($("#potrest")||{}).value)||POT_REST_DEFAULT)/60)+' min</b> rest, then take your top set \u2014 the interval is the mechanism (T15.2: 3\u201312 min).</div></div>';
+            html+='<div class="potnote">Tick it to start a <b>'+Math.round(POT_REST_DEFAULT/60)+' min</b> rest, then take your top set \u2014 the interval is the mechanism (T15.2: 3\u201312 min).</div></div>';
           } else if(potEligible){
             html+='<div class="potoffer"><span class="potofftxt">Ramp done. Add a potentiation set before your top set \u2014 <b>'+pot.name+' '+pot.sets+'\u00d7'+pot.reps+'</b>? Skip it on a flat day.</span><button class="potadd" type="button">Add</button></div>';
           }
@@ -2568,7 +2514,7 @@ function renderToday(){
       const k="w:"+cb.getAttribute("data-w");
       if(cb.checked) _clk0[k]=1; else delete _clk0[k];
       const row=lp.querySelector('.wrow[data-w="'+cb.getAttribute("data-w")+'"]'); if(row) row.classList.toggle("checked",cb.checked);
-      if(cb.checked&&cb.getAttribute("data-w")==="p:0"&&typeof RestTimer!=="undefined") RestTimer.start("set",+(+(($("#potrest")||{}).value)||POT_REST_DEFAULT));
+      if(cb.checked&&cb.getAttribute("data-w")==="p:0"&&typeof RestTimer!=="undefined") RestTimer.start("set",+POT_REST_DEFAULT);
       saveAll();
     }));
     lp.querySelectorAll(".wsw:not(.potsw)").forEach(btn=>btn.addEventListener("click",()=>{
@@ -2673,7 +2619,7 @@ function renderToday(){
       }
     });
     // ---- interactive checklist (ours): tick sets/exercises as completed. Each completion is the seam the rest timer hooks into. ----
-    function startRest(kind,xi){ if(kind==="exercise"){ RestTimer.start("exercise", +(($("#restex")||{}).value)||180); } else { RestTimer.start("set", restForItem(day[xi])); } }
+    function startRest(kind,xi){ if(kind==="exercise"){ RestTimer.start("exercise", REST_EX_DEFAULT); } else { RestTimer.start("set", restForItem(day[xi])); } }
     state.checklist=state.checklist||{}; const clk=state.checklist[sid]=state.checklist[sid]||{};
     const _k=(xi,i)=>xi+":"+i, _nsets=(xi)=>day[xi].sets;
     const _exDone=(xi)=>{ for(let i=0;i<_nsets(xi);i++) if(!clk[_k(xi,i)]) return false; return _nsets(xi)>0; };
@@ -3069,7 +3015,6 @@ function renderGpp(){
       });
     });
   }
-  h+='<div class="gppfoot">GPP should leave you feeling better than when you started. If it is costing you anything on your next heavy day, it was too much. These selections and doses are <b>ours</b> \u2014 general-preparation programming is not something Z&amp;K prescribes session by session.</div>';
   h+='<button class="gppdone" type="button">Log '+mins+' min '+(MODES.find(m=>m[0]===mode)||[,mode])[1].toLowerCase()+'</button>';
   h+='</div>';
   body.innerHTML=h; root.appendChild(body);
@@ -3103,7 +3048,7 @@ function renderGpp(){
     hist.innerHTML='<h2>Recent off-day work</h2><div class="body">'
       +recent.map(g=>'<div class="gpphist"><span class="gphd">'+new Date(g.ts).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})+'</span>'
         +'<span class="gphl">'+g.label+(g.detail?" \u00b7 "+g.detail:"")+'</span><span class="gphm">'+g.mins+' min</span></div>').join("")
-      +'<div class="gppfoot">Logged separately from training \u2014 it does not count toward your lifting volume or fatigue tracking.</div></div>';
+      ;
     root.appendChild(hist);
   }
 }
@@ -3134,7 +3079,7 @@ function readinessBanner(){
   bn.innerHTML='<div class="rlabel">Readiness</div><div class="rtop"><div class="rscorebox">'+r.score+'</div>'+readinessWave()+'</div><div class="rsig"><b>Signal: '+sig+'</b> \u2014 '+(r.signal||"")+'</div>';
   return bn;
 }
-function mountReadiness(){ ["#plan","#progress","#schedule"].forEach(sel=>{ const p=$(sel); if(!p||p.classList.contains("hidden")) return; const old=p.querySelector(".rbanner"); if(old) old.remove(); p.appendChild(readinessBanner()); }); }
+function mountReadiness(){ ["#progress","#schedule"].forEach(sel=>{ const p=$(sel); if(!p||p.classList.contains("hidden")) return; const old=p.querySelector(".rbanner"); if(old) old.remove(); p.appendChild(readinessBanner()); }); }
 function renderProgress(){
   const root=$("#progress"); if(!root) return; root.innerHTML="";
   const logs=logsIn(state.unit), unit=state.unit, lifts=["squat","bench","deadlift"];
@@ -3163,7 +3108,6 @@ function renderProgress(){
    if(rows.length){ html+='<div class="psec"><div class="ph">Re-test check \u00b7 e1RM vs working max</div>';
      rows.forEach(r=>{const sg=r.d>=0?"+":""; const lab=r.st==="ahead"?"re-test / rebase":r.st==="on"?"on target":"unconfirmed";
        html+=`<div class="rtrow ${r.st}"><span class="rtl">${r.l}</span><span class="rtnum">${Math.round(r.mx)}<span class="rtarrow">\u2192</span>${Math.round(r.e)}<span class="pu">${unit}</span></span><span class="rtd">${sg}${Math.round(r.d)} (${sg}${(r.pct*100).toFixed(1)}%)</span><span class="rtpill ${r.st}">${lab}</span></div>`;});
-     html+='<div class="pnote">How to read: <b>ahead</b> = your logged work projects above the max driving your loads \u2014 re-test, or hit <b>Apply to working maxes</b> in the Today logger. <b>on target</b> = within 2.5%, well-calibrated. <b>unconfirmed</b> = no eligible heavy set has reached your set max yet (not a regression). Estimates use Epley on eligible sets (\u2264 8 reps, RPE \u2265 8) \u2014 a heuristic, not a measured 1RM.</div>';
      html+='</div>'; }}
   html+='<div class="psec"><div class="ph">Personal records</div>';
   { const anyPr=lifts.some(l=>prsFor(l,logs));
@@ -3183,7 +3127,6 @@ function renderProgress(){
       if(p.bestE1rm) html+='<div class="pre1">best estimated 1RM <b>'+p.bestE1rm.load+' '+unit+'</b> \u2014 from '+p.bestE1rm.from+' on '+new Date(p.bestE1rm.ts).toLocaleDateString(undefined,{month:"short",day:"numeric"})+'</div>';
       html+='</div>';
     });
-    html+='<div class="pnote prnote">Rep PRs are loads you actually lifted \u2014 not estimates. The estimated 1RM is Epley applied to an eligible set (\u2264 8 reps, RPE \u2265 8) and is a projection, not a lift. A record set in the last three weeks is highlighted.</div>';
   }
   html+='</div>';
   html+='<div class="psec"><div class="ph">Estimated 1RM trend</div>';
@@ -3206,10 +3149,6 @@ function renderProgress(){
           +'<span class="mvnum">'+m.cur+'</span>'
           +'<span class="mvdelta '+cls+'">'+(m.avg>0?m.avg.toFixed(m.avg%1?1:0):"\u2014")+(delta&&big?' <b>'+delta+'</b>':"")+'</span></div>';
       });
-      html+='<div class="pnote mvnote">Working sets per muscle group, this week vs your previous 4-week average (the tick on each bar). '
-        +'A set is a set here \u2014 this counts volume, not effort. Muscle attributions come from the exercise library; '
-        +'main-lift sets are credited to that lift\u2019s primary movers (<b>ours</b>). No target ranges are shown: '
-        +'published volume landmarks (MEV/MAV/MRV) are not part of the sources this app is built on.</div>';
     } }
   html+='</div>';
   html+='<div class="psec"><div class="ph">Volume distribution &amp; completion</div><div class="pdgrid">';
@@ -3357,7 +3296,6 @@ function renderCompDay(o){
   const tw=el("div","meettotal");
   tw.innerHTML='<span class="mtl">Meet total</span><span class="mtv">'+tot+'<span class="u">'+U+'</span></span><span class="mtb">S '+attBest.squat+' \u00b7 B '+attBest.bench+' \u00b7 D '+attBest.deadlift+'</span>';
   o.appendChild(tw);
-  o.appendChild(el("div","pnote","Attempt percentages (91 / 97 / 103%) are a powerlifting convention \u2014 <b>ours</b>, not a Z&amp;K prescription. The basis is the higher of your Setup 1RM and your demonstrated e1RM; override it per lift above. Weights you edit stick; untouched attempts keep tracking the suggestion."));
   const lp=el("div","logpanel"); lp.appendChild(el("div","loghdr","Log your best successful single"));
   const ins={};
   ["squat","bench","deadlift"].forEach(l=>{const row=el("div","logrow"); row.appendChild(el("span","ename",LAB[l]));
@@ -3554,15 +3492,12 @@ function renderSchedule(){
     cal.appendChild(pill);
   }
   root.appendChild(cal);
-  root.appendChild(el("div","pnote","Dates are the plan as written. Miss a session or shift a day and the real dates drift \u2014 treat this as a guide, not a fixed calendar."));
   const startRow=el("div","schstart"); startRow.innerHTML="cycle start: <b>"+cycleStartMon().toLocaleDateString(undefined,{month:"short",day:"numeric"})+"</b>";
   const dpk=el("label","schpick"); dpk.appendChild(document.createTextNode("plan start "));
   const dip=el("input"); dip.type="date"; dip.value=state.cycleStart||isoLocal(mondayThisWeek());
   dip.addEventListener("change",()=>{ const v=dip.value; if(!v) return; const p=v.split("-").map(Number); const d=new Date(p[0],p[1]-1,p[2]); if(isNaN(d)) return; const g=(d.getDay()+6)%7; state.cycleStart=isoLocal(addDaysD(d,-g)); saveAll(); generate(); });
   dpk.appendChild(dip); startRow.appendChild(dpk);
-  const reb=el("button","minibtn"); reb.textContent="reset to this week"; reb.addEventListener("click",()=>{ state.cycleStart=isoLocal(mondayThisWeek()); saveAll(); generate(); }); startRow.appendChild(reb); root.appendChild(startRow);
-  root.appendChild(el("div","pnote","Pick any date to re-map the whole plan \u2014 every week\u2019s sessions below shift to the new calendar. The date snaps to that week\u2019s Monday."));
-  const loggedDates=new Set(state.log.map(x=>isoLocal(new Date(x.ts)))), todayIso=isoLocal(new Date());
+  const reb=el("button","minibtn"); reb.textContent="reset to this week"; reb.addEventListener("click",()=>{ state.cycleStart=isoLocal(mondayThisWeek()); saveAll(); generate(); }); startRow.appendChild(reb); root.appendChild(startRow);  const loggedDates=new Set(state.log.map(x=>isoLocal(new Date(x.ts)))), todayIso=isoLocal(new Date());
   // done-ness by SESSION IDENTITY (block+week+day), not calendar date — so a session logged early/late still checks off.
   const doneKeys=new Set(state.log.map(s=>{ let sg=s.gw; if(sg==null){ sg=0; for(let i=0;i<(s.block||0);i++) sg+=(state.plan.blocks[i]&&state.plan.blocks[i].lengthWk||1); } return (s.block==null?"?":s.block)+"|"+sg+"|"+(s.day==null?"?":s.day); }));
   const mon0=cycleStartMon(); let wk=1;
@@ -3591,7 +3526,7 @@ function renderSchedule(){
 }
 function showTab(t){
   if(state.exitLog) state.exitLog();
-  [["plan","#t-plan","#plan"],["today","#t-today","#today"],["progress","#t-progress","#progress"],["sched","#t-sched","#schedule"],["gpp","#t-gpp","#gpp"]].forEach(([n,btn,pane])=>{
+  [["today","#t-today","#today"],["progress","#t-progress","#progress"],["sched","#t-sched","#schedule"],["gpp","#t-gpp","#gpp"]].forEach(([n,btn,pane])=>{
     $(btn).classList.toggle("on",n===t); $(pane).classList.toggle("hidden",n!==t);
   });
   if(t==="progress") renderProgress();
@@ -3602,7 +3537,6 @@ function showTab(t){
 function openDay(bi,wib,di){ const tb=$("#tblock"); if(!tb) return; tb.value=String(bi); if(typeof populateWeeks==="function") populateWeeks();
   const tw=$("#tweek"); if(tw&&!tw.disabled) tw.value=String(wib); const tday=$("#tday"); if(tday) tday.value=String(di);
   showTab("today"); if(state.recompute) state.recompute(); const tp=$("#today"); if(tp&&tp.scrollIntoView) tp.scrollIntoView({block:"start"}); }
-$("#t-plan").addEventListener("click",()=>showTab("plan"));
 $("#t-today").addEventListener("click",()=>showTab("today"));
 $("#t-progress").addEventListener("click",()=>showTab("progress"));
 $("#t-sched").addEventListener("click",()=>showTab("sched"));
